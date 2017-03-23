@@ -3,7 +3,8 @@
 import React, { Component } from 'react';
 import {
     AppRegistry,
-    Platform
+    Platform,
+    StyleSheet
 } from 'react-native';
 import { StackNavigator, TabNavigator } from 'react-navigation';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -50,7 +51,7 @@ const BbsTab = TabNavigator(
         animationEnabled: false,
         tabBarOptions: {
             showIcon: true,
-            style: { backgroundColor: '#eee', height: 55 },
+            style: { backgroundColor: '#fff', height: 55, borderTopWidth: StyleSheet.hairlineWidth, borderColor: '#ccc' },
             labelStyle: { fontSize: 10, marginTop: 2 },
             activeTintColor: '#03c893',
             inactiveTintColor: '#ccc',

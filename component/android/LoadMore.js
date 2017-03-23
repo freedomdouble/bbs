@@ -16,7 +16,7 @@ export default class LoadMore extends Component {
 
 		if (this.props.loadMoreFlag == 1) {
 			body = (
-				<View style={{ alignItems: 'center', paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#ccc', backgroundColor: this.props.bgcolor }}>
+				<View style={{ alignItems: 'center', paddingVertical: 14, backgroundColor: this.props.bgcolor }}>
 					<Text style={{ color: '#666', fontSize: 12 }}>正在加载...</Text>
 				</View>
 			);
@@ -24,7 +24,7 @@ export default class LoadMore extends Component {
 
 		if (this.props.loadMoreFlag == 2) {
 			body = (
-				<View style={{ alignItems: 'center', paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#ccc', backgroundColor: this.props.bgcolor }}>
+				<View style={{ alignItems: 'center', paddingVertical: 14, backgroundColor: this.props.bgcolor }}>
 					<Text style={{ color: '#666', fontSize: 12 }}>就这么多了...</Text>
 				</View>
 			);

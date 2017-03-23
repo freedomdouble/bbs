@@ -56,7 +56,7 @@ export default class ImageView extends Component {
 
         this.props.navigation.state.params.images.forEach((image, i) => {
 
-            let style = this.state.currPos == i ? { fontSize: 22, color: '#fff' } : { fontSize: 20, color: '#7b7b7b' };
+            let style = this.state.currPos == i ? { fontSize: 22, color: '#03c893' } : { fontSize: 20, color: '#fff' };
 
             footer.push(
                 <Text key={i} style={style}>&bull;</Text>
@@ -100,7 +100,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         position: 'absolute',
-        bottom: 20
+        bottom: 0,
+        opacity: 0.6,
     },
 
 });
