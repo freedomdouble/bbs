@@ -2,7 +2,7 @@
 
 import React, { Component } from 'react';
 import { View, Dimensions } from 'react-native';
-import ImageSizing01 from './ImageSizing01';
+import Image from 'react-native-image-zoom';
 
 const ScreenW = Dimensions.get('window').width;
 const ScreenH = Dimensions.get('window').height;
@@ -19,7 +19,7 @@ export default class ImageViewItem extends Component {
 		return (
 			<View style={{ flex: 1 }}>
 				<View style={{ flex: 1, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' }}>
-					<ImageSizing01 uri={this.props.uri} width={ScreenW} height={ScreenH} />
+					<Image source={{ uri: this.props.uri }} style={{ width: ScreenW, flex: 1 }} onTap={() => { }} onLoad={() => { }} />
 				</View>
 			</View>
 		);
