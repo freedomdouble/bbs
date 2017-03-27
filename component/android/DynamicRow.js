@@ -63,56 +63,6 @@ export default class DynamicRow extends Component {
         }
     }
 
-    // 这里处理点赞操作
-    async _onPressLike() {
-
-        if (this.props.user == null) {
-            this.props.navigation.navigate('Login'); return;
-        }
-
-        if (this.submited == true) {
-            ToastAndroid.show('正在提交...', ToastAndroid.SHORT); return;
-        }
-
-        ToastAndroid.show('正在提交...', ToastAndroid.SHORT);
-
-        this.submited = true;
-
-        let data = new FormData();
-        data.append('dynamic_id', this.state.rowData.id);
-
-        const url = 'http://121.11.71.33:8081/api/dynamic/like';
-
-        try {
-            let response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                    'Authorization': this.user == null ? null : this.user.token
-                },
-                body: data
-            });
-            var result = await response.json();
-        } catch (error) {
-            this.submited = false;
-            ToastAndroid.show('网络错误', ToastAndroid.SHORT);
-            return;
-        }
-
-        ToastAndroid.show(result.msg, ToastAndroid.SHORT);
-
-        if (result.status == -1) {
-            this.submited = false;
-            return;
-        }
-
-        if (result.status == 1) {
-            this._fetchDynamicData();
-            this.submited = false;
-            return;
-        }
-    }
-
     render() {
         // 点赞用户头像尺寸
         let LikeAvatorSize = (ScreenW - 8) / 15;
@@ -271,7 +221,7 @@ export default class DynamicRow extends Component {
                     {address}
                     {/*点赞数量、评论数量*/}
                     <View style={{ flexDirection: 'row', marginTop: 7 }}>
-                        <TouchableHighlight underlayColor='rgba(0,0,0,0.1)' onPress={() => this._onPressLike()}>
+                        <TouchableHighlight underlayColor='rgba(0,0,0,0.1)' onPress={() => this.props.onPressLike(this.state.rowData.id, this.props.rowID)}>
                             <View style={{ flexDirection: 'row' }}>
                                 <Icon name="md-thumbs-up" size={16} color='#ccc' />
                                 <Text style={{ fontSize: 12, color: '#ccc', marginLeft: 2, marginTop: StyleSheet.hairlineWidth }}>{this.state.rowData.like_account}</Text>

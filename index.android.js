@@ -44,7 +44,7 @@ const BbsTab = TabNavigator(
     {
         initialRouteName: 'Index',
         headerMode: 'none',
-        lazyLoad: false,
+        lazyLoad: true,
         swipeEnabled: true,
         mode: Platform.OS == 'ios' ? 'modal' : 'card',
         tabBarPosition: 'bottom',

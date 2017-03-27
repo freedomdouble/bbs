@@ -32,15 +32,15 @@ export default class MineDynamics extends Component {
         this.isPageEnd = false;
         this.list = [];
         this.user = null;
+        this.dynamicId = 0;
+        this.rowId = 0;
         this.state = {
             refreshing: true,
             dataSource: this.ds.cloneWithRows([]),
             loadMoreFlag: 0,
             visible: false,
             wasReplyNickname: '',
-            dynamic: { content: '', dynamic_id: 0, parent_id: 0 },
-            rowId: 0,
-            dynamicId: 0
+            dynamic: { content: '', dynamic_id: 0, parent_id: 0 }
         };
     }
 
@@ -70,6 +70,58 @@ export default class MineDynamics extends Component {
         }
 
         this._fetchData();
+    }
+
+    // 这里处理点赞操作
+    async _onPressLike() {
+
+        if (this.user == null) {
+            this.props.navigation.navigate('Login'); return;
+        }
+
+        if (this.submited == true) {
+            ToastAndroid.show('正在提交...', ToastAndroid.SHORT); return;
+        }
+
+        ToastAndroid.show('正在提交...', ToastAndroid.SHORT);
+
+        this.submited = true;
+
+        let data = new FormData();
+        data.append('dynamic_id', this.dynamicId);
+
+        const url = 'http://121.11.71.33:8081/api/dynamic/like';
+
+        console.log(url);
+
+        try {
+            let response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    'Authorization': this.user == null ? null : this.user.token
+                },
+                body: data
+            });
+            var result = await response.json();
+        } catch (error) {
+            this.submited = false;
+            ToastAndroid.show('网络错误', ToastAndroid.SHORT);
+            return;
+        }
+
+        ToastAndroid.show(result.msg, ToastAndroid.SHORT);
+
+        if (result.status == -1) {
+            this.submited = false;
+            return;
+        }
+
+        if (result.status == 1) {
+            this._updateRowData();
+            this.submited = false;
+            return;
+        }
     }
 
     // 获取数据
@@ -157,12 +209,25 @@ export default class MineDynamics extends Component {
 
     _renderRow(rowData, sectionID, rowID) {
 
-        return <DynamicRow rowData={rowData} user={this.user} rowID={rowID} navigation={this.props.navigation} callback={(wasReplyNickname, dynamic_id, parent_id, rowId) => {
-            let dynamic = this.state.dynamic;
-            dynamic.dynamic_id = dynamic_id;
-            dynamic.parent_id = parent_id;
-            this.setState({ dynamic: dynamic, wasReplyNickname: wasReplyNickname, visible: !this.state.visible, dynamicId: dynamic_id, rowId: rowId });
-        }} />
+        return <DynamicRow
+            rowData={rowData}
+            user={this.user}
+            rowID={rowID}
+            navigation={this.props.navigation}
+            onPressLike={(dynamic_id, rowId) => {
+                this.dynamicId = dynamic_id;
+                this.rowId = rowId;
+                this._onPressLike();
+            }}
+            callback={(wasReplyNickname, dynamic_id, parent_id, rowId) => {
+                let dynamic = this.state.dynamic;
+                dynamic.dynamic_id = dynamic_id;
+                dynamic.parent_id = parent_id;
+
+                this.dynamicId = dynamic_id;
+                this.rowId = rowId;
+                this.setState({ dynamic: dynamic, wasReplyNickname: wasReplyNickname, visible: !this.state.visible });
+            }} />
     }
 
     // 提交评论
@@ -218,7 +283,7 @@ export default class MineDynamics extends Component {
     // 更新某一行的数据
     async _updateRowData() {
 
-        let url = 'http://121.11.71.33:8081/api/dynamic/detail?dynamic_id=' + this.state.dynamicId;
+        let url = 'http://121.11.71.33:8081/api/dynamic/detail?dynamic_id=' + this.dynamicId;
 
         console.log(url);
 
@@ -236,10 +301,11 @@ export default class MineDynamics extends Component {
         }
 
         if (result.status == 1) {
-            this.list[this.state.rowId].comments = result.dynamic.comments;
-            this.list[this.state.rowId].comment_account = result.dynamic.comment_account;
-            let list = this.list.slice(0);
-            this.setState({ dataSource: this.ds.cloneWithRows(list), visible: !this.state.visible });
+            this.list[this.rowId].likes = result.dynamic.likes;
+            this.list[this.rowId].comments = result.dynamic.comments;
+            this.list[this.rowId].comment_account = result.dynamic.comment_account;
+            let list = this.list.concat([]);
+            this.setState({ dataSource: this.ds.cloneWithRows(list), visible: false });
         }
     }
 

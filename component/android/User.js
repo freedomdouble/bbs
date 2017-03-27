@@ -39,14 +39,14 @@ export default class User extends Component {
         this.postsObject = { page: 1, isPageEnd: false, list: [] };
         this.LoadedFocus = false;
         this.loadedFans = false;
+        this.dynamicId = 0;
+        this.rowId = 0;
 
         this.state = {
             currTabel: 0,
             refreshing: true,
             visible: false,
             wasReplyNickname: '',
-            rowId: 0,
-            dynamicId: 0,
             data: null,
             dynamicObject: { dataSource: this.ds.cloneWithRows([]), loadMoreFlag: 0 },
             postsObject: { dataSource: this.ds.cloneWithRows([]), loadMoreFlag: 0 },
@@ -161,6 +161,58 @@ export default class User extends Component {
         }
     }
 
+    // 这里处理点赞操作
+    async _onPressLike() {
+
+        if (this.user == null) {
+            this.props.navigation.navigate('Login'); return;
+        }
+
+        if (this.submited == true) {
+            ToastAndroid.show('正在提交...', ToastAndroid.SHORT); return;
+        }
+
+        ToastAndroid.show('正在提交...', ToastAndroid.SHORT);
+
+        this.submited = true;
+
+        let data = new FormData();
+        data.append('dynamic_id', this.dynamicId);
+
+        const url = 'http://121.11.71.33:8081/api/dynamic/like';
+
+        console.log(url);
+
+        try {
+            let response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    'Authorization': this.user == null ? null : this.user.token
+                },
+                body: data
+            });
+            var result = await response.json();
+        } catch (error) {
+            this.submited = false;
+            ToastAndroid.show('网络错误', ToastAndroid.SHORT);
+            return;
+        }
+
+        ToastAndroid.show(result.msg, ToastAndroid.SHORT);
+
+        if (result.status == -1) {
+            this.submited = false;
+            return;
+        }
+
+        if (result.status == 1) {
+            this._updateRowData();
+            this.submited = false;
+            return;
+        }
+    }
+
     // 提交评论
     async _onPressComment() {
 
@@ -214,7 +266,7 @@ export default class User extends Component {
     // 更新某一行的数据
     async _updateRowData() {
 
-        let url = 'http://121.11.71.33:8081/api/dynamic/detail?dynamic_id=' + this.state.dynamicId;
+        let url = 'http://121.11.71.33:8081/api/dynamic/detail?dynamic_id=' + this.dynamicId;
 
         console.log(url);
 
@@ -232,12 +284,13 @@ export default class User extends Component {
         }
 
         if (result.status == 1) {
-            this.dynamicObject.list[this.state.rowId].comments = result.dynamic.comments;
-            this.dynamicObject.list[this.state.rowId].comment_account = result.dynamic.comment_account;
+            this.dynamicObject.list[this.rowId].likes = result.dynamic.likes;
+            this.dynamicObject.list[this.rowId].comments = result.dynamic.comments;
+            this.dynamicObject.list[this.rowId].comment_account = result.dynamic.comment_account;
             let list = this.dynamicObject.list.slice(0);
             let dynamicObject = this.state.dynamicObject;
             dynamicObject.dataSource = this.ds.cloneWithRows(list);
-            this.setState({ dynamicObject: dynamicObject, visible: !this.state.visible });
+            this.setState({ dynamicObject: dynamicObject, visible: false });
         }
     }
 
@@ -485,12 +538,25 @@ export default class User extends Component {
     }
 
     _renderDynamicRow(rowData, sectionID, rowID) {
-        return <DynamicRow rowData={rowData} user={this.user} rowID={rowID} navigation={this.props.navigation} callback={(wasReplyNickname, dynamic_id, parent_id, rowId) => {
-            let dynamic = this.state.dynamic;
-            dynamic.dynamic_id = dynamic_id;
-            dynamic.parent_id = parent_id;
-            this.setState({ dynamic: dynamic, wasReplyNickname: wasReplyNickname, visible: !this.state.visible, dynamicId: dynamic_id, rowId: rowId });
-        }} />
+        return <DynamicRow
+            rowData={rowData}
+            user={this.user}
+            rowID={rowID}
+            navigation={this.props.navigation}
+            onPressLike={(dynamic_id, rowId) => {
+                this.dynamicId = dynamic_id;
+                this.rowId = rowId;
+                this._onPressLike();
+            }}
+            callback={(wasReplyNickname, dynamic_id, parent_id, rowId) => {
+                let dynamic = this.state.dynamic;
+                dynamic.dynamic_id = dynamic_id;
+                dynamic.parent_id = parent_id;
+
+                this.dynamicId = dynamic_id;
+                this.rowId = rowId;
+                this.setState({ dynamic: dynamic, wasReplyNickname: wasReplyNickname, visible: !this.state.visible });
+            }} />
     }
 
     _renderDynamics() {
