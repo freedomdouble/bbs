@@ -1,3 +1,5 @@
+# 运行系统
+Android
 # 目录结构
 ![](http://olanoc69d.bkt.clouddn.com/20170323290651026013431.png)
 # 截图一
@@ -10,3 +12,8 @@
 ![](https://github.com/freedomdouble/bbs/blob/master/gif/4.gif)
 # 截图五
 ![](https://github.com/freedomdouble/bbs/blob/master/gif/5.gif)
+# 未完成的模块
+消息通知
+# 待优化
+目录结构  
+代码冗余
