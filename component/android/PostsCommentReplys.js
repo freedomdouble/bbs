@@ -272,7 +272,7 @@ export default class PostsCommentReplys extends Component {
 						{_this.reply_num == 0 ? false : (<View style={{ height: 15, backgroundColor: '#eee' }} />)}
 
 						{/*回复列表*/}
-						<View style={{ backgroundColor: '#eee', flex: 1 }}>
+						<View style={{ backgroundColor: '#eee', flex: 1, borderTopWidth: _this.reply_num == 0 ? 0 : StyleSheet.hairlineWidth, borderColor: '#ccc' }}>
 							<ListView
 								enableEmptySections={true}
 								dataSource={_this.state.dataSource}
@@ -294,7 +294,10 @@ export default class PostsCommentReplys extends Component {
 									});
 
 									return (
-										<View style={{ paddingHorizontal: 12, paddingTop: 14, borderTopWidth: StyleSheet.hairlineWidth, borderColor: '#ccc', backgroundColor: '#fff' }}>
+										<View style={{
+											paddingHorizontal: 12, paddingTop: 14, borderBottomWidth: StyleSheet.hairlineWidth,
+											borderColor: '#ccc', backgroundColor: '#fff'
+										}}>
 											<View style={{ flexDirection: 'row', flex: 1, alignItems: 'center' }}>
 												<TouchableHighlight style={{ height: 38, width: 38 }} underlayColor="rgba(0,0,0,0.1)"
 													onPress={() => { this.props.navigation.navigate('User', { id: rowData.user_id }); }}>

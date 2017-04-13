@@ -4,18 +4,21 @@ import React, { Component } from 'react';
 import {
 	View,
 	Text,
+	Animated,
 	StatusBar,
-	ListView,
+	FlatList,
 	BackAndroid,
 	ToastAndroid,
 	ActivityIndicator,
-	RefreshControl
+	TouchableHighlight
 } from 'react-native';
 
-// import BottomNav from './BottomNav';
 import Carousel from './Carousel';
 import LoadMore from './LoadMore';
 import IndexPostsRow from './IndexPostsRow';
+import Icon from 'react-native-vector-icons/Ionicons';
+
+const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
 
 export default class Index extends Component {
 
@@ -23,12 +26,10 @@ export default class Index extends Component {
 
 		super(props);
 
-		this.ds = new ListView.DataSource({ rowHasChanged: (r1, r2) => r1 !== r2 });
 		this.page = 1;
 		this.isPageEnd = false;
-		this.listData = [];
 
-		this.state = { dataSource: this.ds.cloneWithRows([]), viewData: [], loadMoreFlag: 0, refreshing: false };
+		this.state = { listData: [], viewData: [], loadMoreFlag: 0, refreshing: false, isNetDown: false };
 	}
 
 	componentWillMount() {
@@ -67,7 +68,6 @@ export default class Index extends Component {
 			let response = await fetch(url);
 			var result = await response.json();
 		} catch (error) {
-			ToastAndroid.show('网络错误', ToastAndroid.SHORT);
 			return;
 		}
 
@@ -77,7 +77,7 @@ export default class Index extends Component {
 		}
 
 		if (result.status == 1) {
-			this.setState({ viewData: result.list });
+			this.setState({ viewData: result.list, isNetDown: false });
 		}
 	}
 
@@ -92,6 +92,7 @@ export default class Index extends Component {
 			let response = await fetch(url);
 			var result = await response.json();
 		} catch (error) {
+			this.setState({ isNetDown: true, refreshing: false });
 			ToastAndroid.show('网络错误', ToastAndroid.SHORT);
 			return;
 		}
@@ -105,17 +106,17 @@ export default class Index extends Component {
 		if (result.status == 1) {
 			let listLength = result.list.length;
 			let loadMoreFlag = 0;
+			let listData = this.state.listData;
 
 			if (listLength < 10) {
 				this.isPageEnd = true;
 				loadMoreFlag = 2;
 			}
 
-			for (var i = 0; i < listLength; i++) {
-				this.listData.push(result.list[i]);
-			}
+			listData = listData.concat(result.list);
+
 			this.page += 1;
-			this.setState({ loadMoreFlag: loadMoreFlag, dataSource: this.ds.cloneWithRows(this.listData) });
+			this.setState({ loadMoreFlag: loadMoreFlag, listData: listData, isNetDown: false });
 		}
 	}
 
@@ -133,6 +134,7 @@ export default class Index extends Component {
 			let response = await fetch(url);
 			var result = await response.json();
 		} catch (error) {
+			this.setState({ isNetDown: true, refreshing: false });
 			ToastAndroid.show('网络错误', ToastAndroid.SHORT);
 			return;
 		}
@@ -147,36 +149,38 @@ export default class Index extends Component {
 
 			this.page = 2;
 			this.isPageEnd = false;
-			this.listData = [];
 
 			let listLength = result.list.length;
 			let loadMoreFlag = 0;
+			let listData = [];
 
 			if (listLength < 10) {
 				this.isPageEnd = true;
 				loadMoreFlag = 2;
 			}
 
-			for (var i = 0; i < listLength; i++) {
-				this.listData.push(result.list[i]);
-			}
+			listData = listData.concat(result.list);
 
-			this.setState({ loadMoreFlag: loadMoreFlag, dataSource: this.ds.cloneWithRows(this.listData), refreshing: false });
+			this.setState({ loadMoreFlag: loadMoreFlag, listData: listData, refreshing: false });
 
 			ToastAndroid.show('刷新成功', ToastAndroid.SHORT);
 		}
 	}
 
-	_renderHeader() {
+	_ListHeaderComponent() {
 		return <Carousel navigation={this.props.navigation} viewData={this.state.viewData} />;
 	}
 
-	_renderRow(rowData) {
-		return <IndexPostsRow navigation={this.props.navigation} rowData={rowData} />;
+	_renderItem = ({ item }) => {
+		return <IndexPostsRow navigation={this.props.navigation} rowData={item} />;
 	}
 
-	_renderFooter() {
+	_ListFooterComponent() {
 		return <LoadMore loadMoreFlag={this.state.loadMoreFlag} bgcolor='#fff' />;
+	}
+
+	_shouldItemUpdate(prev, next) {
+		return prev.item !== next.item;
 	}
 
 	render() {
@@ -187,20 +191,34 @@ export default class Index extends Component {
 			</View>
 		);
 
-		if (this.listData.length > 0 && this.state.viewData.length > 0) {
+		if (this.state.isNetDown == true && this.state.listData.length == 0 && this.state.viewData.length == 0) {
 			body = (
-				<ListView
-					refreshControl={
-						<RefreshControl enabled={true} refreshing={this.state.refreshing} onRefresh={() => this._onRefresh()} progressBackgroundColor='#eee' colors={['#ffaa66cc', '#ff00ddff']} />
-					}
-					showsVerticalScrollIndicator={true}
-					showsHorizontalScrollIndicator={false}
-					enableEmptySections={true}
+				<View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+					<TouchableHighlight underlayColor="rgba(0,0,0,0)" onPress={() => { this._onRefresh() }}>
+						<View style={{ alignItems: 'center' }}>
+							<Icon name="ios-refresh-circle-outline" color="#03c893" size={40} />
+							<Text style={{ fontSize: 12, color: '#03c893' }}>点击刷新</Text>
+						</View>
+					</TouchableHighlight>
+				</View>
+			);
+		}
+
+		if (this.state.listData.length > 0 && this.state.viewData.length > 0) {
+			body = (
+				<AnimatedFlatList
+					refreshing={this.state.refreshing}
+					data={this.state.listData}
+					debug={false}
+					disableVirtualization={true}
+					legacyImplementation={false}
+					numColumns={1}
 					removeClippedSubviews={false}
-					dataSource={this.state.dataSource}
-					renderHeader={this._renderHeader.bind(this)}
-					renderRow={this._renderRow.bind(this)}
-					renderFooter={this._renderFooter.bind(this)}
+					ListHeaderComponent={this._ListHeaderComponent.bind(this)}
+					renderItem={this._renderItem.bind(this)}
+					ListFooterComponent={this._ListFooterComponent.bind(this)}
+					onRefresh={this._onRefresh.bind(this)}
+					shouldItemUpdate={this._shouldItemUpdate.bind(this)}
 					onEndReached={() => {
 						if (this.state.loadMoreFlag == 0 && this.isPageEnd == false) {
 							this.setState({ loadMoreFlag: 1 });
@@ -223,8 +241,6 @@ export default class Index extends Component {
 					{/* 主体内容 */}
 					{body}
 				</View>
-				{/* 底部导航栏 */}
-				{/*<BottomNav name="Index" nav={this.props.navigation} />*/}
 			</View>
 		);
 	}

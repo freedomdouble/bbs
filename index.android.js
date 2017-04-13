@@ -25,6 +25,8 @@ import DynamicDetail from './component/android/DynamicDetail';
 import DynamicPublish from './component/android/DynamicPublish';
 import ImageView from './component/android/ImageView';
 import Mine from './component/android/Mine';
+import MineMsg from './component/android/MineMsg';
+import MineHistoryMsg from './component/android/MineHistoryMsg';
 import MineInfo from './component/android/MineInfo';
 import MineInfoMobile from './component/android/MineInfoMobile';
 import MineFocus from './component/android/MineFocus';
@@ -88,7 +90,7 @@ Mine.navigationOptions = {
     }
 };
 
-const bbs = StackNavigator({
+const BBS = StackNavigator({
     Home: { screen: BbsTab },
     Login: { screen: Login },
     Reg: { screen: Reg },
@@ -97,6 +99,8 @@ const bbs = StackNavigator({
     MineFocus: { screen: MineFocus },
     MineDynamics: { screen: MineDynamics },
     MinePosts: { screen: MinePosts },
+    MineMsg: { screen: MineMsg },
+    MineHistoryMsg: { screen: MineHistoryMsg },
     MineInfo: { screen: MineInfo },
     MineInfoMobile: { screen: MineInfoMobile },
     MineSet: { screen: MineSet },
@@ -112,4 +116,4 @@ const bbs = StackNavigator({
     User: { screen: User },
 }, { navigationOptions: { header: { visible: false } } });
 
-AppRegistry.registerComponent('bbs', () => bbs);
+AppRegistry.registerComponent('BBS', () => BBS);

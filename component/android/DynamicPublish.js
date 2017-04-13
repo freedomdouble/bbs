@@ -324,7 +324,7 @@ export default class DynamicPublish extends Component {
                         this.setState({ address: addr, locationVisible: !this.state.locationVisible });
                     }}
                 >
-                    <Text style={{fontSize: 12}}>{addr}</Text>
+                    <Text style={{ fontSize: 12 }}>{addr}</Text>
                 </TouchableHighlight>
             );
         });
@@ -341,14 +341,14 @@ export default class DynamicPublish extends Component {
                             style={{ paddingVertical: 11, alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#eee' }}
                             onPress={() => this.setState({ longitude: '', latitude: '', address: '', addrs: [], locationVisible: !this.state.locationVisible })}
                         >
-                            <Text style={{fontSize: 12}}>清除定位</Text>
+                            <Text style={{ fontSize: 12 }}>清除定位</Text>
                         </TouchableHighlight>
                         <TouchableHighlight
                             underlayColor="rgba(0,0,0,0.1)"
                             style={{ paddingVertical: 11, alignItems: 'center' }}
                             onPress={() => this.setState({ locationVisible: !this.state.locationVisible })}
                         >
-                            <Text style={{fontSize: 12}}>取消操作</Text>
+                            <Text style={{ fontSize: 12 }}>取消操作</Text>
                         </TouchableHighlight>
                     </View>
                 </View>
@@ -466,9 +466,9 @@ export default class DynamicPublish extends Component {
                             <Text style={{ color: '#fff', fontSize: 16, marginLeft: 5 }}>发布动态</Text>
                         </View>
                     </TouchableHighlight>
-                    <TouchableHighlight underlayColor="rgba(0,0,0,0)" style={{ alignItems: 'center', justifyContent: 'center' }} onPress={() => _this._onPressSubmit()}>
+                    <TouchableHighlight underlayColor="rgba(0,0,0,0)" style={{ alignItems: 'center', justifyContent: 'center', marginRight: 2 }} onPress={() => _this._onPressSubmit()}>
                         <View>
-                            <Text style={{ color: '#fff', fontSize: 16 }}>发表</Text>
+                            <Text style={{ color: '#fff', fontSize: 14 }}>确定提交</Text>
                         </View>
                     </TouchableHighlight>
                 </View>

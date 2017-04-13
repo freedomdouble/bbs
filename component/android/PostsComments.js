@@ -204,7 +204,7 @@ export default class PostsComments extends Component {
 							this.props.navigation.navigate('PostsComment', { posts_id: this.props.navigation.state.params.id, parent_id: 0, callBack: () => { this._fetchData() } });
 						}}
 					>
-						<Text style={{ color: '#fff', fontSize: 16, marginLeft: 5 }}>我要评论</Text>
+						<Text style={{ color: '#fff', fontSize: 14, marginLeft: 5 }}>我要评论</Text>
 					</TouchableHighlight>
 				</View>
 				{/*内容主体*/}

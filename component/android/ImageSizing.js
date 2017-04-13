@@ -12,7 +12,7 @@ export default class ImageSizing extends Component {
         this.state = { width: 0, height: 0 };
     }
 
-    componentDidMount() {
+    componentWillMount() {
         Image.getSize(this.props.uri, (width, height) => {
             this.setState({ width, height });
         });

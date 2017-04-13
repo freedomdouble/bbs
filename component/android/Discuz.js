@@ -6,14 +6,14 @@ import {
     Text,
     StatusBar,
     ToastAndroid,
-    ListView,
+    Animated,
+    FlatList,
     ActivityIndicator,
     StyleSheet,
     Modal,
     TouchableHighlight,
     AsyncStorage,
-    BackAndroid,
-    RefreshControl
+    BackAndroid
 } from 'react-native';
 
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -21,18 +21,18 @@ import LoadMore from './LoadMore';
 import DiscuzPostsRow from './DiscuzPostsRow';
 import DiscuzCates from './DiscuzCates';
 
+const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
+
 export default class Discuz extends Component {
 
     constructor(props) {
 
         super(props);
         this.user = null;
-        this.ds = new ListView.DataSource({ rowHasChanged: (r1, r2) => r1 !== r2 });
         this.page = 1;
         this.order = 'comment';
         this.isPageEnd = false;
-        this.dataSource = [];
-        this.state = { cates: [], dataSource: this.ds.cloneWithRows([]), loadMoreFlag: 0, modalVisible: false, refreshing: false };
+        this.state = { cates: [], dataSource: [], loadMoreFlag: 0, modalVisible: false, refreshing: false, isNetDown: false };
     }
 
     async componentDidMount() {
@@ -70,6 +70,7 @@ export default class Discuz extends Component {
         }
     }
 
+    // 获取帖子分类数据
     async _fetchCatesData() {
 
         let url = 'http://121.11.71.33:8081/api/recommend/list?unique=appluntanfenlei';
@@ -80,7 +81,6 @@ export default class Discuz extends Component {
             let response = await fetch(url);
             var result = await response.json();
         } catch (error) {
-            ToastAndroid.show('网络错误', ToastAndroid.SHORT);
             return;
         }
 
@@ -94,7 +94,7 @@ export default class Discuz extends Component {
         }
     }
 
-
+    // 获取帖子列表数据
     async _fetchPostsesData() {
 
         let url = 'http://121.11.71.33:8081/api/posts/list?order=' + this.order + '&page=' + this.page;
@@ -105,7 +105,7 @@ export default class Discuz extends Component {
             let response = await fetch(url);
             var result = await response.json();
         } catch (error) {
-            this.isPageEnd = true;
+            this.setState({ isNetDown: true });
             ToastAndroid.show('网络错误', ToastAndroid.SHORT);
             return;
         }
@@ -120,54 +120,24 @@ export default class Discuz extends Component {
 
             if (result.list.length == 0) {
                 this.isPageEnd = true;
-                this.setState({ loadMoreFlag: 2 });
+                this.setState({ loadMoreFlag: 2, isNetDown: false });
                 return;
             }
 
-            for (var i = 0; i < result.list.length; i++) {
-                this.dataSource.push(result.list[i]);
-            }
+            let dataSource = this.state.dataSource;
+
+            dataSource = dataSource.concat(result.list);
 
             if (result.list.length < 10) {
                 this.isPageEnd = true;
-                this.setState({ loadMoreFlag: 2, dataSource: this.ds.cloneWithRows(this.dataSource) });
+                this.setState({ loadMoreFlag: 2, dataSource: dataSource, isNetDown: false });
             }
 
             if (result.list.length == 10) {
                 this.page += 1;
-                this.setState({ loadMoreFlag: 0, dataSource: this.ds.cloneWithRows(this.dataSource) });
+                this.setState({ loadMoreFlag: 0, dataSource: dataSource, isNetDown: false });
             }
         }
-    }
-
-    _renderHeader() {
-
-        return (
-            <View>
-                <DiscuzCates cates={this.state.cates} navigation={this.props.navigation} />
-                {/*排序按钮*/}
-                <TouchableHighlight underlayColor="rgba(0,0,0,0.1)" onPress={() => this.setState({ modalVisible: !this.state.modalVisible })}>
-                    <View style={{
-                        flexDirection: 'row', backgroundColor: '#fff', paddingVertical: 12,
-                        borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#ccc', alignItems: 'center', justifyContent: 'center'
-                    }}>
-                        <Text style={{ color: '#53ABFC', marginLeft: 1, fontSize: 12 }}>{this.order == 'new' ? '最新发布' : '最新回复'}</Text>
-                        <Icon name="ios-arrow-down-outline" size={12} color="#53ABFC" style={{ marginTop: 2 }} />
-                    </View>
-                </TouchableHighlight>
-                {/*\排序按钮*/}
-            </View>
-        );
-    }
-
-    _renderFooter() {
-
-        return <LoadMore loadMoreFlag={this.state.loadMoreFlag} bgcolor='#fff' />;
-    }
-
-    _renderRow(rowData) {
-
-        return (<DiscuzPostsRow navigation={this.props.navigation} rowData={rowData} />);
     }
 
     async _onPressSort() {
@@ -202,20 +172,20 @@ export default class Discuz extends Component {
                 return;
             }
 
-            this.dataSource = [];
+            ToastAndroid.show('加载完成', ToastAndroid.SHORT);
 
-            for (var i = 0; i < result.list.length; i++) {
-                this.dataSource.push(result.list[i]);
-            }
+            let dataSource = [];
+
+            dataSource = dataSource.concat(result.list);
 
             if (result.list.length < 10) {
                 this.isPageEnd = true;
-                this.setState({ loadMoreFlag: 2, dataSource: this.ds.cloneWithRows(this.dataSource) });
+                this.setState({ loadMoreFlag: 2, dataSource: dataSource });
             }
 
             if (result.list.length == 10) {
                 this.page += 1;
-                this.setState({ loadMoreFlag: 0, dataSource: this.ds.cloneWithRows(this.dataSource) });
+                this.setState({ loadMoreFlag: 0, dataSource: dataSource });
             }
         }
     }
@@ -234,7 +204,7 @@ export default class Discuz extends Component {
             let response = await fetch(url);
             var result = await response.json();
         } catch (error) {
-            this.isPageEnd = true;
+            this.setState({ refreshing: false, isNetDown: true });
             ToastAndroid.show('网络错误', ToastAndroid.SHORT);
             return;
         }
@@ -250,29 +220,62 @@ export default class Discuz extends Component {
             this.order = 'comment';
             this.page = 2;
             this.isPageEnd = false;
-            this.dataSource = [];
 
             if (result.list.length == 0) {
                 this.isPageEnd = true;
-                this.setState({ loadMoreFlag: 2 });
+                this.setState({ loadMoreFlag: 2, isNetDown: false });
                 return;
             }
 
-            for (var i = 0; i < result.list.length; i++) {
-                this.dataSource.push(result.list[i]);
-            }
+            let dataSource = [];
+
+            dataSource = dataSource.concat(result.list);
 
             if (result.list.length < 10) {
                 this.isPageEnd = true;
-                this.setState({ loadMoreFlag: 2, dataSource: this.ds.cloneWithRows(this.dataSource), refreshing: false });
+                this.setState({ loadMoreFlag: 2, dataSource: dataSource, refreshing: false, isNetDown: false });
             }
 
             if (result.list.length == 10) {
-                this.setState({ loadMoreFlag: 0, dataSource: this.ds.cloneWithRows(this.dataSource), refreshing: false });
+                this.setState({ loadMoreFlag: 0, dataSource: dataSource, refreshing: false, isNetDown: false });
             }
 
             ToastAndroid.show('刷新成功', ToastAndroid.SHORT);
         }
+    }
+
+    _ListHeaderComponent() {
+
+        return (
+            <View>
+                <DiscuzCates cates={this.state.cates} navigation={this.props.navigation} />
+                {/*排序按钮*/}
+                <TouchableHighlight underlayColor="rgba(0,0,0,0.1)" onPress={() => this.setState({ modalVisible: !this.state.modalVisible })}>
+                    <View style={{
+                        flexDirection: 'row', backgroundColor: '#fff', paddingVertical: 12,
+                        borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#ccc', alignItems: 'center', justifyContent: 'center'
+                    }}>
+                        <Text style={{ color: '#53ABFC', marginLeft: 1, fontSize: 12 }}>{this.order == 'new' ? '最新发布' : '最新回复'}</Text>
+                        <Icon name="ios-arrow-down-outline" size={12} color="#53ABFC" style={{ marginTop: 2 }} />
+                    </View>
+                </TouchableHighlight>
+                {/*\排序按钮*/}
+            </View>
+        );
+    }
+
+    _renderItem = ({ item }) => {
+
+        return (<DiscuzPostsRow navigation={this.props.navigation} rowData={item} />);
+    }
+
+    _ListFooterComponent() {
+
+        return <LoadMore loadMoreFlag={this.state.loadMoreFlag} bgcolor='#fff' />;
+    }
+
+    _shouldItemUpdate(prev, next) {
+        return prev.item !== next.item;
     }
 
     render() {
@@ -283,27 +286,41 @@ export default class Discuz extends Component {
             </View>
         );
 
-        if (this.dataSource.length > 0 && this.state.cates.length > 0) {
+        if (this.state.isNetDown == true && this.state.cates.length == 0 && this.state.dataSource.length == 0) {
+            body = (
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                    <TouchableHighlight underlayColor="rgba(0,0,0,0)" onPress={() => { this._onRefresh() }}>
+                        <View style={{ alignItems: 'center' }}>
+                            <Icon name="ios-refresh-circle-outline" color="#03c893" size={40} />
+                            <Text style={{ fontSize: 12, color: '#03c893' }}>点击刷新</Text>
+                        </View>
+                    </TouchableHighlight>
+                </View>
+            );
+        }
+
+        if (this.state.cates.length > 0 && this.state.dataSource.length > 0) {
             body = (
                 <View style={{ flex: 1, backgroundColor: '#f4f4f4' }}>
-                    <ListView
-                        refreshControl={
-                            <RefreshControl enabled={true} refreshing={this.state.refreshing} onRefresh={() => this._onRefresh()}
-                                progressBackgroundColor='#eee' colors={['#ffaa66cc', '#ff00ddff']} />
-                        }
-                        showsVerticalScrollIndicator={true}
-                        showsHorizontalScrollIndicator={false}
-                        enableEmptySections={true}
-                        renderFooter={() => this._renderFooter()}
-                        renderHeader={() => this._renderHeader()}
-                        dataSource={this.state.dataSource}
+                    <AnimatedFlatList
+                        refreshing={this.state.refreshing}
+                        data={this.state.dataSource}
+                        debug={false}
+                        disableVirtualization={true}
+                        legacyImplementation={false}
+                        numColumns={1}
+                        removeClippedSubviews={false}
+                        ListHeaderComponent={() => this._ListHeaderComponent()}
+                        renderItem={this._renderItem.bind(this)}
+                        ListFooterComponent={() => this._ListFooterComponent()}
+                        onRefresh={this._onRefresh.bind(this)}
+                        shouldItemUpdate={this._shouldItemUpdate.bind(this)}
                         onEndReached={() => {
                             if (this.state.loadMoreFlag == 0 && this.isPageEnd == false) {
                                 this.setState({ loadMoreFlag: 1 });
                                 this._fetchPostsesData();
                             }
                         }}
-                        renderRow={this._renderRow.bind(this)}
                     />
                 </View>
             );

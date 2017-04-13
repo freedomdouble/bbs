@@ -400,7 +400,7 @@ export default class PostsComment extends Component {
                     </TouchableHighlight>
                     <TouchableHighlight underlayColor="rgba(0,0,0,0)" style={{ alignItems: 'center', justifyContent: 'center' }} onPress={() => _this._onPressSubmit()}>
                         <View style={{ flexDirection: 'row' }}>
-                            <Text style={{ color: '#fff', fontSize: 16 }}>提交评论</Text>
+                            <Text style={{ color: '#fff', fontSize: 14 }}>提交评论</Text>
                         </View>
                     </TouchableHighlight>
                 </View>

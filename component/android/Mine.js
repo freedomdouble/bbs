@@ -18,7 +18,6 @@ import {
     RefreshControl
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-// import BottomNav from './BottomNav';
 import ImagePicker from 'react-native-image-crop-picker';
 import ImageResizer from 'react-native-image-resizer';
 
@@ -134,6 +133,16 @@ export default class Mine extends Component {
         } else {
             this.setState({ isVisible: !this.state.isVisible });
         }
+    }
+
+    // 消息
+    _onPressMsg() {
+        if (this.user == null) {
+            this.props.navigation.navigate('Login');
+            return;
+        }
+
+        this.props.navigation.navigate('MineMsg', { callback: () => { this._fetchAccounts() } });
     }
 
     // 个人资料
@@ -343,6 +352,18 @@ export default class Mine extends Component {
         );
 
         if (this.state.loaded == true) {
+
+            let msgBadge = null;
+
+            if (this.state.data != null && this.state.data.msg_account > 0) {
+                msgBadge = (
+                    <Text style={{
+                        marginRight: 6, color: '#fff', fontSize: 10, borderRadius: 9, backgroundColor: 'red',
+                        paddingHorizontal: 6, paddingVertical: 2
+                    }}>{this.state.data.msg_account}</Text>
+                );
+            }
+
             _body = (
                 <View style={{ flex: 1 }}>
                     <View style={{ flexDirection: 'column', backgroundColor: '#03c893', alignItems: 'center', justifyContent: 'center', paddingTop: 30, paddingBottom: 60 }}>
@@ -404,10 +425,11 @@ export default class Mine extends Component {
                         </View>
                     </View>
                     <View style={{ height: 30 }} />
-                    <TouchableHighlight underlayColor="rgba(0,0,0,0.1)" onPress={() => { }}>
+                    <TouchableHighlight underlayColor="rgba(0,0,0,0.1)" onPress={() => this._onPressMsg()}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 18, backgroundColor: '#fff' }}>
                             <View style={{ width: 30 }}><Icon name="ios-megaphone-outline" size={20} color="#5f9ea0" /></View>
                             <Text style={{ flex: 1, fontSize: 14, color: '#222', marginLeft: 5 }}>消息</Text>
+                            {msgBadge}
                             <Icon name="ios-arrow-forward-outline" size={20} color="#E5E5E3" />
                         </View>
                     </TouchableHighlight>

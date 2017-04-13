@@ -45,8 +45,8 @@ export default class PostsPublish extends Component {
             imageView: [],
             cate_name: '选择分类',
             tag_name: '选择标签',
-            cates: [],
-            tags: []
+            cates: [{ title: '选择分类', associated_id: 0 }],
+            tags: [{ id: '0', tag_name: '选择标签' }]
         };
 
         this.submited = false;
@@ -123,6 +123,8 @@ export default class PostsPublish extends Component {
             ToastAndroid.show('网络错误', ToastAndroid.SHORT);
             return;
         }
+
+        console.log(result);
 
         if (result.status == -1) {
             ToastAndroid.show(result.msg, ToastAndroid.SHORT);
@@ -543,7 +545,7 @@ export default class PostsPublish extends Component {
                     </TouchableHighlight>
                     <TouchableHighlight underlayColor="rgba(0,0,0,0)" style={{ alignItems: 'center', justifyContent: 'center' }} onPress={() => _this._onPressSubmit()}>
                         <View style={{ flexDirection: 'row' }}>
-                            <Text style={{ color: '#fff', fontSize: 16 }}>确定发布</Text>
+                            <Text style={{ color: '#fff', fontSize: 14 }}>确定发布</Text>
                         </View>
                     </TouchableHighlight>
                 </View>

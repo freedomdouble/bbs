@@ -20,8 +20,9 @@ export default class Carousel extends Component {
 
         this.timer = {};
         this.viewPage = {};
+        this.listData = this.props.viewData;
 
-        this.state = { currentPage: 0, listData: [] };
+        this.state = { currentPage: 0 };
     }
 
     componentWillUnmount() {
@@ -29,7 +30,6 @@ export default class Carousel extends Component {
     }
 
     componentDidMount() {
-        this.setState({ listData: this.props.viewData });
         this._setIntervel();
     }
 
@@ -37,17 +37,17 @@ export default class Carousel extends Component {
 
         const height = 220;
 
-        if (this.state.listData.length == 0) {
+        if (this.listData.length == 0) {
             return false;
         } else {
             let imageWraper = [];
             let dotWraper = [];
 
-            this.state.listData.forEach((data, i) => {
+            this.listData.forEach((data, i) => {
                 imageWraper.push(
-                    <View key={i} style={{ width: ScreenW, height: 180 }}>
+                    <View key={i} style={{ width: ScreenW, height: height }}>
                         <TouchableHighlight underlayColor="rgba(0,0,0,0.1)" onPress={() => {
-                            this.props.navigation.navigate('PostsDetail', { id: data.associated_id, callBack: () => { _this._setIntervel() } });
+                            this.props.navigation.navigate('PostsDetail', { id: data.associated_id, callBack: () => { this._setIntervel() } });
                         }}>
                             <Image source={{ uri: data.thumb }} style={{ width: ScreenW, height: height }} />
                         </TouchableHighlight>
@@ -74,7 +74,7 @@ export default class Carousel extends Component {
                     </ViewPagerAndroid>
                     <View style={{ width: ScreenW, height: 38, position: 'absolute', bottom: 0, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, backgroundColor: 'rgba(52,52,52,0.3)' }}>
                         <View style={{ flex: 8, alignItems: 'flex-start' }}>
-                            <Text style={{ color: '#fff' }}>{this.state.listData[this.state.currentPage].short_title}</Text>
+                            <Text style={{ color: '#fff' }}>{this.listData[this.state.currentPage].short_title}</Text>
                         </View>
                         <View style={{ flexDirection: 'row' }}>
                             {dotWraper}
@@ -106,7 +106,7 @@ export default class Carousel extends Component {
 
             let currentPage;
 
-            if (this.state.currentPage > 0 && (this.state.currentPage + 1 == this.state.listData.length)) {
+            if (this.state.currentPage > 0 && (this.state.currentPage + 1 == this.listData.length)) {
                 currentPage = 0;
             } else {
                 currentPage = this.state.currentPage + 1;

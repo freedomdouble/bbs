@@ -14,7 +14,8 @@ import {
     Image as DefaulImage,
     ActivityIndicator,
     RefreshControl,
-    ListView,
+    Animated,
+    FlatList,
     ViewPagerAndroid,
     Modal,
     TextInput
@@ -24,6 +25,7 @@ import DynamicRow from './DynamicRow';
 import IndexPostsRow from './IndexPostsRow';
 import LoadMore2 from './LoadMore2';
 
+const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
 const ScreenW = Dimensions.get('window').width;
 
 export default class User extends Component {
@@ -31,16 +33,15 @@ export default class User extends Component {
     constructor(props) {
         super(props);
 
-        this.ds = new ListView.DataSource({ rowHasChanged: (r1, r2) => r1 !== r2 });
         this.user = null;
         this.submited = false;
         this._viewPage = {};
-        this.dynamicObject = { page: 1, isPageEnd: false, list: [] };
-        this.postsObject = { page: 1, isPageEnd: false, list: [] };
+        this.dynamicObject = { page: 1, isPageEnd: false };
+        this.postsObject = { page: 1, isPageEnd: false };
         this.LoadedFocus = false;
         this.loadedFans = false;
         this.dynamicId = 0;
-        this.rowId = 0;
+        this.rowIndex = 0;
 
         this.state = {
             currTabel: 0,
@@ -48,10 +49,10 @@ export default class User extends Component {
             visible: false,
             wasReplyNickname: '',
             data: null,
-            dynamicObject: { dataSource: this.ds.cloneWithRows([]), loadMoreFlag: 0 },
-            postsObject: { dataSource: this.ds.cloneWithRows([]), loadMoreFlag: 0 },
-            focusDataSource: this.ds.cloneWithRows([]),
-            fansDataSource: this.ds.cloneWithRows([]),
+            dynamicObject: { listData: [], loadMoreFlag: 0 },
+            postsObject: { listData: [], loadMoreFlag: 0 },
+            focusListData: [],
+            fansListData: [],
             dynamic: { content: '', dynamic_id: 0, parent_id: 0 }
         };
     }
@@ -284,12 +285,8 @@ export default class User extends Component {
         }
 
         if (result.status == 1) {
-            this.dynamicObject.list[this.rowId].likes = result.dynamic.likes;
-            this.dynamicObject.list[this.rowId].comments = result.dynamic.comments;
-            this.dynamicObject.list[this.rowId].comment_account = result.dynamic.comment_account;
-            let list = this.dynamicObject.list.slice(0);
             let dynamicObject = this.state.dynamicObject;
-            dynamicObject.dataSource = this.ds.cloneWithRows(list);
+            dynamicObject.listData[this.rowIndex] = result.dynamic;
             this.setState({ dynamicObject: dynamicObject, visible: false });
         }
     }
@@ -317,20 +314,15 @@ export default class User extends Component {
                 this.dynamicObject.isPageEnd = true;
             }
 
-            if (dataLength == 0 && this.state.dynamicObject.dataSource.getRowCount() == 0) {
+            if (dataLength == 0 && this.state.dynamicObject.listData.length == 0) {
                 loadMoreFlag = 0;
-            }
-
-            for (var i = 0; i < dataLength; i++) {
-                this.dynamicObject.list.push(result.list[i]);
             }
 
             this.dynamicObject.page += 1;
 
             let dynamicObject = this.state.dynamicObject;
-            dynamicObject.dataSource = this.ds.cloneWithRows(this.dynamicObject.list);
+            dynamicObject.listData = dynamicObject.listData.concat(result.list);
             dynamicObject.loadMoreFlag = loadMoreFlag;
-
             this.setState({ refreshing: false, dynamicObject: dynamicObject });
         }
         if (result.status == -1) {
@@ -359,7 +351,6 @@ export default class User extends Component {
 
             this.dynamicObject.isPageEnd = false;
             this.dynamicObject.page = 2;
-            this.dynamicObject.list = [];
 
             let dataLength = result.list.length;
             let loadMoreFlag = 0;
@@ -374,15 +365,9 @@ export default class User extends Component {
             }
 
             let dynamicObject = this.state.dynamicObject;
-            dynamicObject.dataSource = this.ds.cloneWithRows([]);
-            this.setState({ dynamicObject: dynamicObject });
-
-            this.dynamicObject.list = this.dynamicObject.list.concat(result.list);
-            dynamicObject.dataSource = this.ds.cloneWithRows(this.dynamicObject.list);
+            dynamicObject.listData = result.list;
             dynamicObject.loadMoreFlag = loadMoreFlag;
-            this.setState({ refreshing: false, dynamicObject });
-
-            ToastAndroid.show('刷新成功', ToastAndroid.SHORT);
+            this.setState({ dynamicObject: dynamicObject, refreshing: false });
         }
         if (result.status == -1) {
             ToastAndroid.show(result.msg, ToastAndroid.SHORT);
@@ -413,18 +398,14 @@ export default class User extends Component {
                 this.postsObject.isPageEnd = true;
             }
 
-            if (dataLength == 0 && this.state.postsObject.dataSource.getRowCount() == 0) {
+            if (dataLength == 0 && this.state.postsObject.listData.length == 0) {
                 loadMoreFlag = 0;
-            }
-
-            for (var i = 0; i < dataLength; i++) {
-                this.postsObject.list.push(result.list[i]);
             }
 
             this.postsObject.page += 1;
 
             let postsObject = this.state.postsObject;
-            postsObject.dataSource = this.ds.cloneWithRows(this.postsObject.list);
+            postsObject.listData = postsObject.listData.concat(result.list);
             postsObject.loadMoreFlag = loadMoreFlag;
 
             this.setState({ refreshing: false, postsObject: postsObject });
@@ -455,7 +436,6 @@ export default class User extends Component {
 
             this.postsObject.isPageEnd = false;
             this.postsObject.page = 2;
-            this.postsObject.list = [];
 
             let dataLength = result.list.length;
             let loadMoreFlag = 0;
@@ -469,14 +449,10 @@ export default class User extends Component {
                 loadMoreFlag = 0;
             }
 
-            this.postsObject.list = this.postsObject.list.concat(result.list);
-
             let postsObject = this.state.postsObject;
-            postsObject.dataSource = this.ds.cloneWithRows(this.postsObject.list);
+            postsObject.listData = result.list;
             postsObject.loadMoreFlag = loadMoreFlag;
             this.setState({ refreshing: false, postsObject: postsObject });
-
-            ToastAndroid.show('刷新成功', ToastAndroid.SHORT);
         }
         if (result.status == -1) {
             ToastAndroid.show(result.msg, ToastAndroid.SHORT);
@@ -503,7 +479,7 @@ export default class User extends Component {
 
         if (result.status == 1) {
             this.LoadedFocus = true;
-            this.setState({ refreshing: false, focusDataSource: this.ds.cloneWithRows(result.list) });
+            this.setState({ refreshing: false, focusListData: result.list });
         }
         if (result.status == -1) {
             ToastAndroid.show(result.msg, ToastAndroid.SHORT);
@@ -529,7 +505,7 @@ export default class User extends Component {
 
         if (result.status == 1) {
             this.loadedFans = true;
-            this.setState({ refreshing: false, fansDataSource: this.ds.cloneWithRows(result.list) });
+            this.setState({ refreshing: false, fansListData: result.list });
         }
         if (result.status == -1) {
             ToastAndroid.show(result.msg, ToastAndroid.SHORT);
@@ -537,39 +513,48 @@ export default class User extends Component {
         }
     }
 
-    _renderDynamicRow(rowData, sectionID, rowID) {
-        return <DynamicRow
-            rowData={rowData}
-            user={this.user}
-            rowID={rowID}
-            navigation={this.props.navigation}
-            onPressLike={(dynamic_id, rowId) => {
-                this.dynamicId = dynamic_id;
-                this.rowId = rowId;
-                this._onPressLike();
-            }}
-            callback={(wasReplyNickname, dynamic_id, parent_id, rowId) => {
-                let dynamic = this.state.dynamic;
-                dynamic.dynamic_id = dynamic_id;
-                dynamic.parent_id = parent_id;
+    _shouldItemUpdate(prev, next) {
+        return prev.item !== next.item;
+    }
 
-                this.dynamicId = dynamic_id;
-                this.rowId = rowId;
-                this.setState({ dynamic: dynamic, wasReplyNickname: wasReplyNickname, visible: !this.state.visible });
-            }} />
+    _renderDynamicRow = ({ item, index }) => {
+        return (
+            <DynamicRow
+                rowData={item}
+                user={this.user}
+                rowIndex={index}
+                navigation={this.props.navigation}
+                _onPressLike={(dynamicId, rowIndex) => {
+                    this.dynamicId = dynamicId;
+                    this.rowIndex = rowIndex;
+                    this._onPressLike();
+                }}
+                _onPressReply={(wasReplyNickname, wasReplyCommentId, dynamicId, rowIndex) => {
+                    let dynamic = this.state.dynamic;
+                    dynamic.dynamic_id = dynamicId;
+                    dynamic.parent_id = wasReplyCommentId;
+                    this.dynamicId = dynamicId;
+                    this.rowIndex = rowIndex;
+                    this.setState({ dynamic: dynamic, wasReplyNickname: wasReplyNickname, visible: !this.state.visible });
+                }}
+            />
+        );
     }
 
     _renderDynamics() {
         return (
-            <ListView
-                refreshControl={
-                    <RefreshControl enabled={true} refreshing={this.state.refreshing} onRefresh={() => this._onRefreshDynamics()} progressBackgroundColor='#eee' colors={['#ffaa66cc', '#ff00ddff']} />
-                }
-                showsVerticalScrollIndicator={true}
-                showsHorizontalScrollIndicator={false}
-                enableEmptySections={true}
-                renderFooter={() => <LoadMore2 loadMoreFlag={this.state.dynamicObject.loadMoreFlag} bgcolor='#fff' />}
-                dataSource={this.state.dynamicObject.dataSource}
+            <AnimatedFlatList
+                refreshing={this.state.refreshing}
+                data={this.state.dynamicObject.listData}
+                debug={false}
+                disableVirtualization={true}
+                legacyImplementation={false}
+                numColumns={1}
+                removeClippedSubviews={false}
+                renderItem={this._renderDynamicRow.bind(this)}
+                ListFooterComponent={() => <LoadMore2 loadMoreFlag={this.state.dynamicObject.loadMoreFlag} bgcolor='#fff' />}
+                onRefresh={this._onRefreshDynamics.bind(this)}
+                shouldItemUpdate={this._shouldItemUpdate.bind(this)}
                 onEndReached={() => {
                     if (this.state.refreshing == false && this.state.dynamicObject.loadMoreFlag == 0 && this.dynamicObject.isPageEnd == false) {
                         let dynamicObject = this.state.dynamicObject;
@@ -578,31 +563,24 @@ export default class User extends Component {
                         this._fetchDynamics();
                     }
                 }}
-                renderRow={this._renderDynamicRow.bind(this)}
-                renderHeader={() => {
-                    if (this.state.refreshing == false && this.state.dynamicObject.dataSource.getRowCount() == 0 && this.dynamicObject.isPageEnd == true) {
-                        return (
-                            <View style={{ alignItems: 'center', justifyContent: 'center', flex: 1, height: Dimensions.get('window').height }}>
-                                <Text style={{ fontSize: 16, color: '#ccc' }}>TA还没有发表动态哦</Text>
-                            </View>
-                        );
-                    }
-                }}
             />
         );
     }
 
     _renderPosts() {
         return (
-            <ListView
-                refreshControl={
-                    <RefreshControl enabled={true} refreshing={this.state.refreshing} onRefresh={() => this._onRefreshPosts()} progressBackgroundColor='#eee' colors={['#ffaa66cc', '#ff00ddff']} />
-                }
-                showsVerticalScrollIndicator={true}
-                showsHorizontalScrollIndicator={false}
-                enableEmptySections={true}
-                renderFooter={() => <LoadMore2 loadMoreFlag={this.state.postsObject.loadMoreFlag} bgcolor='#fff' />}
-                dataSource={this.state.postsObject.dataSource}
+            <AnimatedFlatList
+                refreshing={this.state.refreshing}
+                data={this.state.postsObject.listData}
+                debug={false}
+                disableVirtualization={true}
+                legacyImplementation={false}
+                numColumns={1}
+                removeClippedSubviews={false}
+                renderItem={this._renderPostsRow.bind(this)}
+                ListFooterComponent={() => <LoadMore2 loadMoreFlag={this.state.postsObject.loadMoreFlag} bgcolor='#fff' />}
+                onRefresh={this._onRefreshPosts.bind(this)}
+                shouldItemUpdate={this._shouldItemUpdate.bind(this)}
                 onEndReached={() => {
                     if (this.state.refreshing == false && this.state.postsObject.loadMoreFlag == 0 && this.postsObject.isPageEnd == false) {
                         let postsObject = this.state.postsObject;
@@ -611,58 +589,40 @@ export default class User extends Component {
                         this._fetchPosts();
                     }
                 }}
-                renderRow={this._renderPostsRow.bind(this)}
-                renderHeader={() => {
-                    if (this.state.refreshing == false && this.state.postsObject.dataSource.getRowCount() == 0 && this.postsObject.isPageEnd == true) {
-                        return (
-                            <View style={{ alignItems: 'center', justifyContent: 'center', flex: 1, height: Dimensions.get('window').height }}>
-                                <Text style={{ fontSize: 16, color: '#ccc' }}>TA还没有发布帖子哦</Text>
-                            </View>
-                        );
-                    }
-                }}
             />
         );
     }
 
-    _renderPostsRow(rowData) {
-        return <IndexPostsRow navigation={this.props.navigation} rowData={rowData} />;
+    _renderPostsRow = ({ item }) => {
+        return <IndexPostsRow navigation={this.props.navigation} rowData={item} />;
     }
 
     _renderFocus() {
         return (
-            <ListView
-                refreshControl={
-                    <RefreshControl enabled={true} refreshing={this.state.refreshing} onRefresh={() => this._fetchFocus()} progressBackgroundColor='#eee' colors={['#ffaa66cc', '#ff00ddff']} />
-                }
-                showsVerticalScrollIndicator={true}
-                showsHorizontalScrollIndicator={false}
-                enableEmptySections={true}
-                dataSource={this.state.focusDataSource}
-                onEndReached={() => { }}
-                renderRow={this._renderFocusRow.bind(this)}
-                renderHeader={() => {
-                    if (this.state.refreshing == false && this.state.focusDataSource.getRowCount() == 0 && this.LoadedFocus == true) {
-                        return (
-                            <View style={{ alignItems: 'center', justifyContent: 'center', flex: 1, height: Dimensions.get('window').height }}>
-                                <Text style={{ fontSize: 16, color: '#ccc' }}>TA还没有关注其他人哦</Text>
-                            </View>
-                        );
-                    }
-                }}
+            <AnimatedFlatList
+                refreshing={this.state.refreshing}
+                data={this.state.focusListData}
+                debug={false}
+                disableVirtualization={true}
+                legacyImplementation={false}
+                numColumns={1}
+                removeClippedSubviews={false}
+                renderItem={this._renderFocusRow.bind(this)}
+                onRefresh={this._fetchFocus.bind(this)}
+                shouldItemUpdate={this._shouldItemUpdate.bind(this)}
             />
         );
     }
 
-    _renderFocusRow(rowData) {
+    _renderFocusRow = ({ item }) => {
 
         let user_id = 0;
 
         if (this.state.currTabel == 2) {
-            user_id = rowData.to_id;
+            user_id = item.to_id;
         }
         if (this.state.currTabel == 3) {
-            user_id = rowData.from_id;
+            user_id = item.from_id;
         }
 
         return (
@@ -677,8 +637,8 @@ export default class User extends Component {
                     borderBottomWidth: StyleSheet.hairlineWidth,
                     borderColor: '#eee'
                 }}>
-                    <DefaulImage style={{ height: 50, width: 50, borderRadius: 25 }} source={{ uri: rowData.avator }} />
-                    <Text style={{ flex: 1, color: '#222', marginLeft: 10 }}>{rowData.nickname}</Text>
+                    <DefaulImage style={{ height: 50, width: 50, borderRadius: 25 }} source={{ uri: item.avator }} />
+                    <Text style={{ flex: 1, color: '#222', marginLeft: 10 }}>{item.nickname}</Text>
                     <Icon name="ios-arrow-forward-outline" size={20} color="#eee" />
                 </View>
             </TouchableHighlight>
@@ -687,25 +647,17 @@ export default class User extends Component {
 
     _renderFans() {
         return (
-            <ListView
-                refreshControl={
-                    <RefreshControl enabled={true} refreshing={this.state.refreshing} onRefresh={() => this._fetchFans()} progressBackgroundColor='#eee' colors={['#ffaa66cc', '#ff00ddff']} />
-                }
-                showsVerticalScrollIndicator={true}
-                showsHorizontalScrollIndicator={false}
-                enableEmptySections={true}
-                dataSource={this.state.fansDataSource}
-                onEndReached={() => { }}
-                renderRow={this._renderFocusRow.bind(this)}
-                renderHeader={() => {
-                    if (this.state.refreshing == false && this.state.fansDataSource.getRowCount() == 0 && this.loadedFans == true) {
-                        return (
-                            <View style={{ alignItems: 'center', justifyContent: 'center', flex: 1, height: Dimensions.get('window').height }}>
-                                <Text style={{ fontSize: 16, color: '#ccc' }}>TA还没有粉丝哦</Text>
-                            </View>
-                        );
-                    }
-                }}
+            <AnimatedFlatList
+                refreshing={this.state.refreshing}
+                data={this.state.fansListData}
+                debug={false}
+                disableVirtualization={true}
+                legacyImplementation={false}
+                numColumns={1}
+                removeClippedSubviews={false}
+                renderItem={this._renderFocusRow.bind(this)}
+                onRefresh={this._fetchFans.bind(this)}
+                shouldItemUpdate={this._shouldItemUpdate.bind(this)}
             />
         );
     }
@@ -716,19 +668,19 @@ export default class User extends Component {
 
         this.setState({ currTabel: currTabel });
 
-        if (currTabel == 0 && this.dynamicObject.list.length == 0 && this.dynamicObject.isPageEnd == false) {
+        if (currTabel == 0 && this.state.dynamicObject.listData.length == 0 && this.dynamicObject.isPageEnd == false) {
             this._onRefreshDynamics();
         }
 
-        if (currTabel == 1 && this.postsObject.list.length == 0 && this.postsObject.isPageEnd == false) {
+        if (currTabel == 1 && this.state.postsObject.listData.length == 0 && this.postsObject.isPageEnd == false) {
             this._onRefreshPosts();
         }
 
-        if (currTabel == 2 && this.state.focusDataSource.getRowCount() == 0 && this.LoadedFocus == false) {
+        if (currTabel == 2 && this.state.focusListData.length == 0 && this.LoadedFocus == false) {
             this._fetchFocus();
         }
 
-        if (currTabel == 3 && this.state.fansDataSource.getRowCount() == 0 && this.loadedFans == false) {
+        if (currTabel == 3 && this.state.fansListData.length == 0 && this.loadedFans == false) {
             this._fetchFans();
         }
     }
@@ -745,13 +697,53 @@ export default class User extends Component {
             </View>
         );
 
+        let emptyDynamic = null;
+        let emptyPosts = null;
+        let emptyFocus = null;
+        let emptyFans = null;
+
+        if (this.state.refreshing == false && this.state.dynamicObject.listData.length == 0 && this.dynamicObject.isPageEnd == true) {
+            emptyDynamic = (
+                <View style={{ alignItems: 'center', justifyContent: 'center', flex: 10000 }}>
+                    <Text style={{ fontSize: 16, color: '#ccc' }}>TA还没有发表动态哦</Text>
+                </View>
+            );
+        }
+
+        if (this.state.refreshing == false && this.state.postsObject.listData.length == 0 && this.postsObject.isPageEnd == true) {
+            emptyPosts = (
+                <View style={{ alignItems: 'center', justifyContent: 'center', flex: 10000 }}>
+                    <Text style={{ fontSize: 16, color: '#ccc' }}>TA还没有发布帖子哦</Text>
+                </View>
+            );
+        }
+
+        if (this.state.refreshing == false && this.state.focusListData.length == 0 && this.LoadedFocus == true) {
+            emptyFocus = (
+                <View style={{ alignItems: 'center', justifyContent: 'center', flex: 10000 }}>
+                    <Text style={{ fontSize: 16, color: '#ccc' }}>TA还没有关注其他人哦</Text>
+                </View>
+            );
+        }
+
+        if (this.state.refreshing == false && this.state.fansListData.length == 0 && this.loadedFans == true) {
+            emptyFans = (
+                <View style={{ alignItems: 'center', justifyContent: 'center', flex: 10000 }}>
+                    <Text style={{ fontSize: 16, color: '#ccc' }}>TA还没有粉丝哦</Text>
+                </View>
+            );
+        }
+
         if (this.state.data != null) {
             body = (
                 <View style={{ flex: 1 }}>
                     {/*头部信息*/}
                     <View style={{ backgroundColor: '#03c893' }}>
                         <View
-                            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 12, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#ddd' }}>
+                            style={{
+                                flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 12,
+                                paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#fff'
+                            }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                 <DefaulImage source={{ uri: this.state.data.avator }} style={{ width: 44, height: 44 }} />
                                 <Text style={{ marginLeft: 15, color: '#fff' }}>{this.state.data.nickname}</Text>
@@ -761,32 +753,32 @@ export default class User extends Component {
                                 onPress={() => { this._focus() }}
                                 style={{ borderWidth: 1, borderColor: '#fff', borderRadius: 3, height: 20, paddingHorizontal: 4, justifyContent: 'center' }}
                             >
-                                <Text style={{ fontSize: 12, color: '#fff' }}>{this.state.data.is_focus == 1 ? '取消关注' : '添加关注'}</Text>
+                                <Text style={{ fontSize: 10, color: '#fff' }}>{this.state.data.is_focus == 1 ? '取消关注' : '添加关注'}</Text>
                             </TouchableHighlight>
                         </View>
                         <View style={{ height: 40 }}>
                             <View style={{ flex: 1, flexDirection: 'row', paddingVertical: 10 }}>
                                 <TouchableHighlight
-                                    style={{ flex: 1, alignItems: 'center', justifyContent: 'center', borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: '#ddd' }}
+                                    style={{ flex: 1, alignItems: 'center', justifyContent: 'center', borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: '#fff' }}
                                     underlayColor='rgba(0,0,0,0)' onPress={() => { this._onPressTabel(0) }}>
-                                    <Text style={{ color: this.state.currTabel == 0 ? '#fff' : '#ddd', fontSize: 14 }}>动态 {this.state.data.dynamic_account}</Text>
+                                    <Text style={{ color: this.state.currTabel == 0 ? '#fff' : '#ddd', fontSize: 12 }}>动态 {this.state.data.dynamic_account}</Text>
                                 </TouchableHighlight>
                                 <TouchableHighlight
-                                    style={{ flex: 1, alignItems: 'center', justifyContent: 'center', borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: '#ddd' }}
+                                    style={{ flex: 1, alignItems: 'center', justifyContent: 'center', borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: '#fff' }}
                                     underlayColor='rgba(0,0,0,0)' onPress={() => { this._onPressTabel(1) }}>
-                                    <Text style={{ color: this.state.currTabel == 1 ? '#fff' : '#ddd', fontSize: 14 }}>帖子 {this.state.data.posts_account}</Text>
+                                    <Text style={{ color: this.state.currTabel == 1 ? '#fff' : '#eee', fontSize: 12 }}>帖子 {this.state.data.posts_account}</Text>
                                 </TouchableHighlight>
                                 <TouchableHighlight
-                                    style={{ flex: 1, alignItems: 'center', justifyContent: 'center', borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: '#ddd' }}
+                                    style={{ flex: 1, alignItems: 'center', justifyContent: 'center', borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: '#fff' }}
                                     underlayColor='rgba(0,0,0,0)'
                                     onPress={() => { this._onPressTabel(2) }}>
-                                    <Text style={{ color: this.state.currTabel == 2 ? '#fff' : '#ddd', fontSize: 14 }}>关注 {this.state.data.focus_account}</Text>
+                                    <Text style={{ color: this.state.currTabel == 2 ? '#fff' : '#eee', fontSize: 12 }}>关注 {this.state.data.focus_account}</Text>
                                 </TouchableHighlight>
                                 <TouchableHighlight
                                     style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
                                     underlayColor='rgba(0,0,0,0)'
                                     onPress={() => { this._onPressTabel(3) }}>
-                                    <Text style={{ color: this.state.currTabel == 3 ? '#fff' : '#ddd', fontSize: 14 }}>粉丝 {this.state.data.fans_account}</Text>
+                                    <Text style={{ color: this.state.currTabel == 3 ? '#fff' : '#eee', fontSize: 12 }}>粉丝 {this.state.data.fans_account}</Text>
                                 </TouchableHighlight>
                             </View>
                         </View>
@@ -798,21 +790,25 @@ export default class User extends Component {
                             {/*动态列表*/}
                             <View style={{ width: ScreenW, flex: 1 }}>
                                 {this._renderDynamics()}
+                                {emptyDynamic}
                             </View>
                             {/*\动态列表*/}
                             {/*帖子列表*/}
                             <View style={{ width: ScreenW, flex: 1 }}>
                                 {this._renderPosts()}
+                                {emptyPosts}
                             </View>
                             {/*\帖子列表*/}
                             {/*关注列表*/}
                             <View style={{ width: ScreenW, flex: 1 }}>
                                 {this._renderFocus()}
+                                {emptyFocus}
                             </View>
                             {/*\关注列表*/}
                             {/*粉丝列表*/}
                             <View style={{ width: ScreenW, flex: 1 }}>
                                 {this._renderFans()}
+                                {emptyFans}
                             </View>
                             {/*\粉丝列表*/}
                         </ViewPagerAndroid >
@@ -826,7 +822,7 @@ export default class User extends Component {
                 {/* 设置状态栏颜色 */}
                 <StatusBar backgroundColor="#03c893" />
                 {/* 顶部导航栏 */}
-                <View style={{ flexDirection: 'row', height: 45, paddingHorizontal: 10, alignItems: 'center', backgroundColor: '#03c893', }}>
+                <View style={{ flexDirection: 'row', height: 45, paddingHorizontal: 10, alignItems: 'center', backgroundColor: '#03c893' }}>
                     <TouchableHighlight underlayColor="rgba(0,0,0,0)" onPress={() => { this.props.navigation.goBack(null); }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                             <Icon name="ios-arrow-back-outline" size={22} color="#fff" style={{ marginTop: 1 }} />

@@ -10,19 +10,19 @@ import {
     Dimensions,
     AsyncStorage,
     ToastAndroid,
-    ListView,
+    Animated,
+    FlatList,
     ViewPagerAndroid,
-    RefreshControl,
     Modal,
     TextInput,
-    BackAndroid,
-    ActivityIndicator
+    BackAndroid
 } from 'react-native';
 
 import Icon from 'react-native-vector-icons/Ionicons';
 import LoadMore from './LoadMore';
 import DynamicRow from './DynamicRow';
 
+const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
 const ScreenW = Dimensions.get('window').width;
 
 export default class Dynamic extends Component {
@@ -32,20 +32,21 @@ export default class Dynamic extends Component {
         super(props);
         this.submited = false;
         this._viewPage = {};
-        this.ds = new ListView.DataSource({ rowHasChanged: (r1, r2) => r1 !== r2 });
         this.user = null;
         this.dynamicId = 0;
-        this.rowId = 0;
-        this.newListObject = { page: 1, isPageEnd: false, list: [] };
-        this.hotListObject = { page: 1, isPageEnd: false, list: [] };
+        this.rowIndex = 0;
+        this.newListObject = { page: 1, isPageEnd: false };
+        this.hotListObject = { page: 1, isPageEnd: false };
 
         this.state = {
             refreshing: true,
             currTabel: 0,
             visible: false,
             wasReplyNickname: '',
-            newListObject: { dataSource: this.ds.cloneWithRows([]), loadMoreFlag: 0 },
-            hotListObject: { dataSource: this.ds.cloneWithRows([]), loadMoreFlag: 0 },
+            newListData: [],
+            hotListData: [],
+            newLoadMoreFlag: 0,
+            hotLoadMoreFlag: 0,
             dynamic: { content: '', dynamic_id: 0, parent_id: 0 }
         };
     }
@@ -209,46 +210,35 @@ export default class Dynamic extends Component {
         if (result.status == 1) {
 
             if (this.state.currTabel == 0) {
-                this.newListObject.list[this.rowId].likes = result.dynamic.likes;
-                this.newListObject.list[this.rowId].comments = result.dynamic.comments;
-                this.newListObject.list[this.rowId].comment_account = result.dynamic.comment_account;
-                let list = this.newListObject.list.slice(0);
-                let newListObject = this.state.newListObject;
-                newListObject.dataSource = this.ds.cloneWithRows(list);
-                this.setState({ newListObject: newListObject, visible: false });
 
-                this.hotListObject.list.forEach((l, index) => {
+                let newListData = this.state.newListData;
+
+                newListData[this.rowIndex] = result.dynamic;
+                this.setState({ newListData: newListData, visible: false });
+
+                let hotListData = this.state.hotListData;
+
+                this.state.hotListData.forEach((l, index) => {
                     if (l.id == this.dynamicId) {
-                        this.hotListObject.list[index].likes = result.dynamic.likes;
-                        this.hotListObject.list[index].comments = result.dynamic.comments;
-                        this.hotListObject.list[index].comment_account = result.dynamic.comment_account;
-                        let hotList = this.hotListObject.list.slice(0);
-                        let hotListObject = this.state.hotListObject;
-                        hotListObject.dataSource = this.ds.cloneWithRows(hotList);
-                        this.setState({ hotListObject: hotListObject });
+                        hotListData[index] = result.dynamic;
+                        this.setState({ hotListData: hotListData });
                         return;
                     }
                 });
             }
 
             if (this.state.currTabel == 1) {
-                this.hotListObject.list[this.rowId].likes = result.dynamic.likes;
-                this.hotListObject.list[this.rowId].comments = result.dynamic.comments;
-                this.hotListObject.list[this.rowId].comment_account = result.dynamic.comment_account;
-                let list = this.hotListObject.list.slice(0);
-                let hotListObject = this.state.hotListObject;
-                hotListObject.dataSource = this.ds.cloneWithRows(list);
-                this.setState({ hotListObject: hotListObject, visible: false });
 
-                this.newListObject.list.forEach((l, index) => {
+                let hotListData = this.state.hotListData;
+                hotListData[this.rowIndex] = result.dynamic;
+                this.setState({ hotListData: hotListData, visible: false });
+
+                let newListData = this.state.newListData;
+
+                this.state.newListData.forEach((l, index) => {
                     if (l.id == this.dynamicId) {
-                        this.newListObject.list[index].likes = result.dynamic.likes;
-                        this.newListObject.list[index].comments = result.dynamic.comments;
-                        this.newListObject.list[index].comment_account = result.dynamic.comment_account;
-                        let newList = this.newListObject.list.slice(0);
-                        let newListObject = this.state.newListObject;
-                        newListObject.dataSource = this.ds.cloneWithRows(newList);
-                        this.setState({ newListObject: newListObject });
+                        newListData[index] = result.dynamic;
+                        this.setState({ newListData: newListData });
                         return;
                     }
                 });
@@ -274,6 +264,8 @@ export default class Dynamic extends Component {
         }
 
         if (result.status == 1) {
+            this.newListObject.page += 1;
+
             let dataLength = result.list.length;
             let loadMoreFlag = 0;
 
@@ -282,17 +274,10 @@ export default class Dynamic extends Component {
                 this.newListObject.isPageEnd = true;
             }
 
-            for (var i = 0; i < dataLength; i++) {
-                this.newListObject.list.push(result.list[i]);
-            }
+            var newListData = this.state.newListData;
+            newListData = newListData.concat(result.list);
 
-            this.newListObject.page += 1;
-
-            let newListObject = this.state.newListObject;
-            newListObject.dataSource = this.ds.cloneWithRows(this.newListObject.list);
-            newListObject.loadMoreFlag = loadMoreFlag;
-
-            this.setState({ refreshing: false, newListObject: newListObject });
+            this.setState({ refreshing: false, newListData: newListData, newLoadMoreFlag: loadMoreFlag });
         }
         if (result.status == -1) {
             ToastAndroid.show(result.msg, ToastAndroid.SHORT);
@@ -322,7 +307,6 @@ export default class Dynamic extends Component {
 
             this.newListObject.isPageEnd = false;
             this.newListObject.page = 2;
-            this.newListObject.list = [];
 
             let dataLength = result.list.length;
             let loadMoreFlag = 0;
@@ -332,16 +316,7 @@ export default class Dynamic extends Component {
                 this.newListObject.isPageEnd = true;
             }
 
-            let newListObject = this.state.newListObject;
-            newListObject.dataSource = this.state.newListObject.dataSource.cloneWithRows([]);
-            this.setState({ newListObject: newListObject });
-
-            this.newListObject.list = this.newListObject.list.concat(result.list);
-            newListObject.dataSource = this.ds.cloneWithRows(this.newListObject.list);
-            newListObject.loadMoreFlag = loadMoreFlag;
-            this.setState({ refreshing: false, newListObject: newListObject });
-
-            ToastAndroid.show('刷新成功', ToastAndroid.SHORT);
+            this.setState({ refreshing: false, newListData: result.list, newLoadMoreFlag: loadMoreFlag });
         }
         if (result.status == -1) {
             ToastAndroid.show(result.msg, ToastAndroid.SHORT);
@@ -366,6 +341,8 @@ export default class Dynamic extends Component {
         }
 
         if (result.status == 1) {
+            this.hotListObject.page += 1;
+
             let dataLength = result.list.length;
             let loadMoreFlag = 0;
 
@@ -374,17 +351,10 @@ export default class Dynamic extends Component {
                 this.hotListObject.isPageEnd = true;
             }
 
-            for (var i = 0; i < dataLength; i++) {
-                this.hotListObject.list.push(result.list[i]);
-            }
+            let hotListData = this.state.hotListData;
+            hotListData = hotListData.concat(result.list);
 
-            this.hotListObject.page += 1;
-
-            let hotListObject = this.state.hotListObject;
-            hotListObject.dataSource = this.ds.cloneWithRows(this.hotListObject.list);
-            hotListObject.loadMoreFlag = loadMoreFlag;
-
-            this.setState({ refreshing: false, hotListObject: hotListObject });
+            this.setState({ refreshing: false, hotListData: hotListData, hotLoadMoreFlag: loadMoreFlag });
         }
 
         if (result.status == -1) {
@@ -415,7 +385,6 @@ export default class Dynamic extends Component {
 
             this.hotListObject.isPageEnd = false;
             this.hotListObject.page = 2;
-            this.hotListObject.list = [];
 
             let dataLength = result.list.length;
             let loadMoreFlag = 0;
@@ -425,16 +394,7 @@ export default class Dynamic extends Component {
                 this.hotListObject.isPageEnd = true;
             }
 
-            let hotListObject = this.state.hotListObject;
-            hotListObject.dataSource = this.ds.cloneWithRows([]);
-            this.setState({ hotListObject: hotListObject });
-
-            this.hotListObject.list = this.hotListObject.list.concat(result.list);
-            hotListObject.dataSource = this.ds.cloneWithRows(this.hotListObject.list);
-            hotListObject.loadMoreFlag = loadMoreFlag;
-            this.setState({ refreshing: false, hotListObject: hotListObject });
-
-            ToastAndroid.show('刷新成功', ToastAndroid.SHORT);
+            this.setState({ refreshing: false, hotListData: result.list, hotLoadMoreFlag: loadMoreFlag });
         }
         if (result.status == -1) {
             ToastAndroid.show(result.msg, ToastAndroid.SHORT);
@@ -446,11 +406,11 @@ export default class Dynamic extends Component {
         this._viewPage.setPage(currTabel);
         this.setState({ currTabel: currTabel });
 
-        if (currTabel == 0 && this.newListObject.list.length == 0) {
+        if (currTabel == 0 && this.state.newListData.length == 0) {
             this._onRefreshNewList();
         }
 
-        if (currTabel == 1 && this.hotListObject.list.length == 0) {
+        if (currTabel == 1 && this.state.hotListData.length == 0) {
             this._onRefreshHotList();
         }
     }
@@ -459,51 +419,56 @@ export default class Dynamic extends Component {
         this._onPressTabel(e.nativeEvent.position);
     }
 
-    _renderRow(rowData, sectionID, rowID) {
+    _renderItem = ({ item, index }) => {
 
-        return <DynamicRow
-            rowData={rowData}
-            user={this.user}
-            rowID={rowID}
-            navigation={this.props.navigation}
-            onPressLike={(dynamic_id, rowId) => {
-                this.dynamicId = dynamic_id;
-                this.rowId = rowId;
-                this._onPressLike();
-            }}
-            callback={(wasReplyNickname, dynamic_id, parent_id, rowId) => {
-                let dynamic = this.state.dynamic;
-                dynamic.dynamic_id = dynamic_id;
-                dynamic.parent_id = parent_id;
+        return (
+            <DynamicRow
+                rowData={item}
+                user={this.user}
+                rowIndex={index}
+                navigation={this.props.navigation}
+                _onPressLike={(dynamicId, rowIndex) => {
+                    this.dynamicId = dynamicId;
+                    this.rowIndex = rowIndex;
+                    this._onPressLike();
+                }}
+                _onPressReply={(wasReplyNickname, wasReplyCommentId, dynamicId, rowIndex) => {
+                    let dynamic = this.state.dynamic;
+                    dynamic.dynamic_id = dynamicId;
+                    dynamic.parent_id = wasReplyCommentId;
+                    this.dynamicId = dynamicId;
+                    this.rowIndex = rowIndex;
+                    this.setState({ dynamic: dynamic, wasReplyNickname: wasReplyNickname, visible: !this.state.visible });
+                }}
+            />
+        );
+    }
 
-                this.dynamicId = dynamic_id;
-                this.rowId = rowId;
-                this.setState({ dynamic: dynamic, wasReplyNickname: wasReplyNickname, visible: !this.state.visible });
-            }} />
+    _shouldItemUpdate(prev, next) {
+        return prev.item !== next.item;
     }
 
     _renderNewList() {
 
         return (
-            <ListView
-                refreshControl={
-                    <RefreshControl enabled={true} refreshing={this.state.refreshing} onRefresh={() => this._onRefreshNewList()} progressBackgroundColor='#eee'
-                        colors={['#ffaa66cc', '#ff00ddff']} />
-                }
-                showsVerticalScrollIndicator={true}
-                showsHorizontalScrollIndicator={false}
-                enableEmptySections={true}
-                renderFooter={() => <LoadMore bgcolor='#fff' loadMoreFlag={this.state.newListObject.loadMoreFlag} />}
-                dataSource={this.state.newListObject.dataSource}
+            <AnimatedFlatList
+                refreshing={this.state.refreshing}
+                data={this.state.newListData}
+                debug={false}
+                disableVirtualization={true}
+                legacyImplementation={false}
+                numColumns={1}
+                removeClippedSubviews={false}
+                renderItem={this._renderItem.bind(this)}
+                ListFooterComponent={() => <LoadMore bgcolor='#fff' loadMoreFlag={this.state.newLoadMoreFlag} />}
+                onRefresh={this._onRefreshNewList.bind(this)}
+                shouldItemUpdate={this._shouldItemUpdate.bind(this)}
                 onEndReached={() => {
-                    if (this.state.refreshing == false && this.state.newListObject.loadMoreFlag == 0 && this.newListObject.isPageEnd == false) {
-                        let newListObject = this.state.newListObject;
-                        newListObject.loadMoreFlag = 1;
-                        this.setState({ newListObject: newListObject });
+                    if (this.state.refreshing == false && this.state.newLoadMoreFlag == 0 && this.newListObject.isPageEnd == false) {
+                        this.setState({ newLoadMoreFlag: 1 });
                         this._fetchNewListData();
                     }
                 }}
-                renderRow={this._renderRow.bind(this)}
             />
         );
     }
@@ -511,25 +476,24 @@ export default class Dynamic extends Component {
     _renderHotList() {
 
         return (
-            <ListView
-                refreshControl={
-                    <RefreshControl enabled={true} refreshing={this.state.refreshing} onRefresh={() => this._onRefreshHotList()} progressBackgroundColor='#eee'
-                        colors={['#ffaa66cc', '#ff00ddff']} />
-                }
-                showsVerticalScrollIndicator={true}
-                showsHorizontalScrollIndicator={false}
-                enableEmptySections={true}
-                renderFooter={() => <LoadMore bgcolor='#fff' loadMoreFlag={this.state.hotListObject.loadMoreFlag} />}
-                dataSource={this.state.hotListObject.dataSource}
+            <AnimatedFlatList
+                refreshing={this.state.refreshing}
+                data={this.state.hotListData}
+                debug={false}
+                disableVirtualization={true}
+                legacyImplementation={false}
+                numColumns={1}
+                removeClippedSubviews={false}
+                renderItem={this._renderItem.bind(this)}
+                ListFooterComponent={() => <LoadMore bgcolor='#fff' loadMoreFlag={this.state.hotLoadMoreFlag} />}
+                onRefresh={this._onRefreshHotList.bind(this)}
+                shouldItemUpdate={this._shouldItemUpdate.bind(this)}
                 onEndReached={() => {
-                    if (this.state.refreshing == false && this.state.hotListObject.loadMoreFlag == 0 && this.hotListObject.isPageEnd == false) {
-                        let hotListObject = this.state.hotListObject;
-                        hotListObject.loadMoreFlag = 1;
-                        this.setState({ hotListObject: hotListObject });
+                    if (this.state.refreshing == false && this.state.hotLoadMoreFlag == 0 && this.hotListObject.isPageEnd == false) {
+                        this.setState({ hotLoadMoreFlag: 1 });
                         this._fetchHotListData();
                     }
                 }}
-                renderRow={this._renderRow.bind(this)}
             />
         );
     }
@@ -537,33 +501,25 @@ export default class Dynamic extends Component {
     render() {
 
         let body = (
-            <View style={{ flex: 1, backgroundColor: '#f4f4f4', alignItems: 'center', justifyContent: 'center' }}>
-                <ActivityIndicator animating={true} size="large" color="#03c893" />
+            <View style={{ flex: 1 }}>
+                <ViewPagerAndroid
+                    ref={viewPager => { this._viewPage = viewPager; }}
+                    style={{ width: ScreenW, flex: 1 }}
+                    initialPage={0}
+                    onPageSelected={this._onPageSelected}>
+                    {/*最新列表*/}
+                    <View style={{ width: ScreenW, flex: 1, backgroundColor: '#fff' }}>
+                        {this._renderNewList()}
+                    </View>
+                    {/*\最新列表*/}
+                    {/*热门列表*/}
+                    <View style={{ width: ScreenW, flex: 1, backgroundColor: '#fff' }}>
+                        {this._renderHotList()}
+                    </View>
+                    {/*\热门列表*/}
+                </ViewPagerAndroid >
             </View>
         );
-
-        if (this.newListObject.list.length > 0 || this.hotListObject.list.length > 0) {
-            body = (
-                <View style={{ flex: 1 }}>
-                    <ViewPagerAndroid
-                        ref={viewPager => { this._viewPage = viewPager; }}
-                        style={{ width: ScreenW, flex: 1 }}
-                        initialPage={0}
-                        onPageSelected={this._onPageSelected}>
-                        {/*最新列表*/}
-                        <View style={{ width: ScreenW, flex: 1, backgroundColor: '#fff' }}>
-                            {this._renderNewList()}
-                        </View>
-                        {/*\最新列表*/}
-                        {/*热门列表*/}
-                        <View style={{ width: ScreenW, flex: 1, backgroundColor: '#fff' }}>
-                            {this._renderHotList()}
-                        </View>
-                        {/*\热门列表*/}
-                    </ViewPagerAndroid >
-                </View>
-            );
-        }
 
         return (
             <View style={{ flex: 1 }}>
@@ -595,8 +551,6 @@ export default class Dynamic extends Component {
                     </View>
                     {/*\导航栏*/}
                     {body}
-                    {/* 底部导航栏 */}
-                    {/*<BottomNav name="Dynamic" nav={this.props.navigation} />*/}
                 </View>
                 {/* 评论模态框 */}
                 <Modal transparent={true} ref="modal" visible={this.state.visible} onRequestClose={() => this.setState({ visible: !this.state.visible })}>

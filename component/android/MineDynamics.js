@@ -12,13 +12,14 @@ import {
     Modal,
     TextInput,
     BackAndroid,
-    ListView,
-    RefreshControl
+    Animated,
+    FlatList
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import DynamicRow from './DynamicRow';
 import LoadMore2 from './LoadMore2';
 
+const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
 const ScreenW = Dimensions.get('window').width;
 
 export default class MineDynamics extends Component {
@@ -26,17 +27,16 @@ export default class MineDynamics extends Component {
     constructor(props) {
 
         super(props);
-        this.ds = new ListView.DataSource({ rowHasChanged: (r1, r2) => r1 !== r2 });
         this.submited = false;
         this.page = 1;
         this.isPageEnd = false;
         this.list = [];
         this.user = null;
         this.dynamicId = 0;
-        this.rowId = 0;
+        this.rowIndex = 0;
         this.state = {
             refreshing: true,
-            dataSource: this.ds.cloneWithRows([]),
+            listData: [],
             loadMoreFlag: 0,
             visible: false,
             wasReplyNickname: '',
@@ -149,13 +149,12 @@ export default class MineDynamics extends Component {
                 this.isPageEnd = true;
             }
 
-            for (var i = 0; i < dataLength; i++) {
-                this.list.push(result.list[i]);
-            }
+            let listData = this.state.listData;
+            listData = listData.concat(result.list);
 
             this.page += 1;
 
-            this.setState({ refreshing: false, dataSource: this.ds.cloneWithRows(this.list), loadMoreFlag: loadMoreFlag });
+            this.setState({ refreshing: false, listData: listData, loadMoreFlag: loadMoreFlag });
         }
         if (result.status == -1) {
             ToastAndroid.show(result.msg, ToastAndroid.SHORT);
@@ -181,8 +180,6 @@ export default class MineDynamics extends Component {
             return;
         }
 
-        console.log(result);
-
         if (result.status == 1) {
 
             this.isPageEnd = false;
@@ -197,37 +194,13 @@ export default class MineDynamics extends Component {
                 this.isPageEnd = true;
             }
 
-            this.list = this.list.concat(result.list);
-            this.setState({ dataSource: this.state.dataSource.cloneWithRows([]) });
-            this.setState({ refreshing: false, dataSource: this.state.dataSource.cloneWithRows(this.list), loadMoreFlag: loadMoreFlag });
+            let listData = result.list;
+            this.setState({ refreshing: false, listData: listData, loadMoreFlag: loadMoreFlag });
         }
         if (result.status == -1) {
             ToastAndroid.show(result.msg, ToastAndroid.SHORT);
             this.setState({ refreshing: false });
         }
-    }
-
-    _renderRow(rowData, sectionID, rowID) {
-
-        return <DynamicRow
-            rowData={rowData}
-            user={this.user}
-            rowID={rowID}
-            navigation={this.props.navigation}
-            onPressLike={(dynamic_id, rowId) => {
-                this.dynamicId = dynamic_id;
-                this.rowId = rowId;
-                this._onPressLike();
-            }}
-            callback={(wasReplyNickname, dynamic_id, parent_id, rowId) => {
-                let dynamic = this.state.dynamic;
-                dynamic.dynamic_id = dynamic_id;
-                dynamic.parent_id = parent_id;
-
-                this.dynamicId = dynamic_id;
-                this.rowId = rowId;
-                this.setState({ dynamic: dynamic, wasReplyNickname: wasReplyNickname, visible: !this.state.visible });
-            }} />
     }
 
     // 提交评论
@@ -301,12 +274,37 @@ export default class MineDynamics extends Component {
         }
 
         if (result.status == 1) {
-            this.list[this.rowId].likes = result.dynamic.likes;
-            this.list[this.rowId].comments = result.dynamic.comments;
-            this.list[this.rowId].comment_account = result.dynamic.comment_account;
-            let list = this.list.concat([]);
-            this.setState({ dataSource: this.ds.cloneWithRows(list), visible: false });
+            let listData = this.state.listData;
+            listData[this.rowIndex] = result.dynamic;
+            this.setState({ listData: listData, visible: false });
         }
+    }
+
+    _renderItem = ({ item, index }) => {
+        return (
+            <DynamicRow
+                rowData={item}
+                user={this.user}
+                rowIndex={index}
+                navigation={this.props.navigation}
+                _onPressLike={(dynamicId, rowIndex) => {
+                    this.dynamicId = dynamicId;
+                    this.rowIndex = rowIndex;
+                    this._onPressLike();
+                }}
+                _onPressReply={(wasReplyNickname, wasReplyCommentId, dynamicId, rowIndex) => {
+                    let dynamic = this.state.dynamic;
+                    dynamic.dynamic_id = dynamicId;
+                    dynamic.parent_id = wasReplyCommentId;
+                    this.dynamicId = dynamicId;
+                    this.rowIndex = rowIndex;
+                    this.setState({ dynamic: dynamic, wasReplyNickname: wasReplyNickname, visible: !this.state.visible });
+                }} />
+        );
+    }
+
+    _shouldItemUpdate(prev, next) {
+        return prev.item !== next.item;
     }
 
     render() {
@@ -324,23 +322,24 @@ export default class MineDynamics extends Component {
                     </TouchableHighlight>
                 </View>
                 <View style={{ flex: 1, backgroundColor: '#fff' }}>
-                    <ListView
-                        refreshControl={
-                            <RefreshControl enabled={true} refreshing={this.state.refreshing} onRefresh={() => this._onRefresh()} progressBackgroundColor='#eee'
-                                colors={['#ffaa66cc', '#ff00ddff']} />
-                        }
-                        showsVerticalScrollIndicator={true}
-                        showsHorizontalScrollIndicator={false}
-                        enableEmptySections={true}
-                        renderFooter={() => <LoadMore2 loadMoreFlag={this.state.loadMoreFlag} />}
-                        dataSource={this.state.dataSource}
+                    <AnimatedFlatList
+                        refreshing={this.state.refreshing}
+                        data={this.state.listData}
+                        debug={false}
+                        disableVirtualization={true}
+                        legacyImplementation={false}
+                        numColumns={1}
+                        removeClippedSubviews={false}
+                        renderItem={this._renderItem.bind(this)}
+                        ListFooterComponent={() => <LoadMore2 loadMoreFlag={this.state.loadMoreFlag} />}
+                        onRefresh={this._onRefresh.bind(this)}
+                        shouldItemUpdate={this._shouldItemUpdate.bind(this)}
                         onEndReached={() => {
                             if (this.state.refreshing == false && this.state.loadMoreFlag == 0 && this.isPageEnd == false) {
                                 this.setState({ loadMoreFlag: 1 });
                                 this._fetchData();
                             }
                         }}
-                        renderRow={this._renderRow.bind(this)}
                     />
                 </View>
                 {/* 评论模态框 */}

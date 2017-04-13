@@ -9,26 +9,26 @@ import {
     TouchableHighlight,
     ToastAndroid,
     BackAndroid,
-    ListView,
-    RefreshControl
+    Animated,
+    FlatList
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import IndexPostsRow from './IndexPostsRow';
 import LoadMore2 from './LoadMore2';
+
+const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
 
 export default class MinePosts extends Component {
 
     constructor(props) {
 
         super(props);
-        this.ds = new ListView.DataSource({ rowHasChanged: (r1, r2) => r1 !== r2 });
         this.page = 1;
         this.isPageEnd = false;
-        this.list = [];
         this.user = null;
         this.state = {
             refreshing: true,
-            dataSource: this.ds.cloneWithRows([]),
+            listData: [],
             loadMoreFlag: 0,
         };
     }
@@ -86,13 +86,12 @@ export default class MinePosts extends Component {
                 this.isPageEnd = true;
             }
 
-            for (var i = 0; i < dataLength; i++) {
-                this.list.push(result.list[i]);
-            }
+            let listData = this.state.listData;
+            listData = listData.concat(result.list);
 
             this.page += 1;
 
-            this.setState({ refreshing: false, dataSource: this.ds.cloneWithRows(this.list), loadMoreFlag: loadMoreFlag });
+            this.setState({ refreshing: false, listData: listData, loadMoreFlag: loadMoreFlag });
         }
         if (result.status == -1) {
             ToastAndroid.show(result.msg, ToastAndroid.SHORT);
@@ -132,8 +131,7 @@ export default class MinePosts extends Component {
                 this.isPageEnd = true;
             }
 
-            this.list = this.list.concat(result.list);
-            this.setState({ refreshing: false, dataSource: this.ds.cloneWithRows(this.list), loadMoreFlag: loadMoreFlag });
+            this.setState({ refreshing: false, listData: result.list, loadMoreFlag: loadMoreFlag });
             ToastAndroid.show('刷新成功', ToastAndroid.SHORT);
         }
         if (result.status == -1) {
@@ -142,8 +140,12 @@ export default class MinePosts extends Component {
         }
     }
 
-    _renderRow(rowData) {
-        return <IndexPostsRow navigation={this.props.navigation} rowData={rowData} />;
+    _renderItem = ({ item }) => {
+        return <IndexPostsRow navigation={this.props.navigation} rowData={item} />;
+    }
+
+    _shouldItemUpdate(prev, next) {
+        return prev.item !== next.item;
     }
 
     render() {
@@ -161,22 +163,24 @@ export default class MinePosts extends Component {
                     </TouchableHighlight>
                 </View>
                 <View style={{ flex: 1, backgroundColor: '#fff' }}>
-                    <ListView
-                        refreshControl={
-                            <RefreshControl enabled={true} refreshing={this.state.refreshing} onRefresh={() => this._onRefresh()} progressBackgroundColor='#eee' colors={['#ffaa66cc', '#ff00ddff']} />
-                        }
-                        showsVerticalScrollIndicator={true}
-                        showsHorizontalScrollIndicator={false}
-                        enableEmptySections={true}
-                        renderFooter={() => <LoadMore2 loadMoreFlag={this.state.loadMoreFlag} />}
-                        dataSource={this.state.dataSource}
+                    <AnimatedFlatList
+                        refreshing={this.state.refreshing}
+                        data={this.state.listData}
+                        debug={false}
+                        disableVirtualization={true}
+                        legacyImplementation={false}
+                        numColumns={1}
+                        removeClippedSubviews={false}
+                        renderItem={this._renderItem.bind(this)}
+                        ListFooterComponent={() => <LoadMore2 loadMoreFlag={this.state.loadMoreFlag} />}
+                        onRefresh={this._onRefresh.bind(this)}
+                        shouldItemUpdate={this._shouldItemUpdate.bind(this)}
                         onEndReached={() => {
                             if (this.state.refreshing == false && this.state.loadMoreFlag == 0 && this.isPageEnd == false) {
                                 this.setState({ loadMoreFlag: 1 });
                                 this._fetchData();
                             }
                         }}
-                        renderRow={this._renderRow.bind(this)}
                     />
                 </View>
             </View>

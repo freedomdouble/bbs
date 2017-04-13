@@ -40,29 +40,6 @@ export default class DynamicRow extends Component {
         }
     }
 
-    // 点赞或者评论后应该在这里获取最新数据
-    async _fetchDynamicData() {
-
-        let url = 'http://121.11.71.33:8081/api/dynamic/detail?dynamic_id=' + this.state.rowData.id;
-
-        try {
-            let response = await fetch(url);
-            var result = await response.json();
-        } catch (error) {
-            ToastAndroid.show('网络错误', ToastAndroid.SHORT);
-            return;
-        }
-
-        if (result.status == -1) {
-            ToastAndroid.show(result.msg, ToastAndroid.SHORT);
-            return;
-        }
-
-        if (result.status == 1) {
-            this.setState({ rowData: result.dynamic });
-        }
-    }
-
     render() {
         // 点赞用户头像尺寸
         let LikeAvatorSize = (ScreenW - 8) / 15;
@@ -158,7 +135,7 @@ export default class DynamicRow extends Component {
                         if (this.props.user == null) {
                             this.props.navigation.navigate('Login'); return;
                         }
-                        this.props.callback('回复' + comment.nickname1 + '：', this.state.rowData.id, comment.id, this.props.rowID);
+                        this.props._onPressReply('回复' + comment.nickname1 + '：', comment.id, this.state.rowData.id, this.props.rowIndex);
                     }}>
                         <Text style={{ color: '#222' }}>
                             <Text style={{ color: '#222', fontSize: 12 }}><Text style={{ color: '#53ABFC' }}>{comment.nickname1}</Text>：{comment.content}</Text>
@@ -171,9 +148,12 @@ export default class DynamicRow extends Component {
                         if (this.props.user == null) {
                             this.props.navigation.navigate('Login'); return;
                         }
-                        this.props.callback('回复' + comment.nickname1 + '：', this.state.rowData.id, comment.id, this.props.rowID);
+                        this.props._onPressReply('回复' + comment.nickname1 + '：', comment.id, this.state.rowData.id, this.props.rowIndex);
                     }}>
-                        <Text style={{ color: '#222', fontSize: 12 }}><Text style={{ color: '#53ABFC' }}>{comment.nickname1}</Text>回复<Text style={{ color: '#53ABFC' }}>{comment.nickname2}</Text>：{comment.content}</Text>
+                        <Text style={{ color: '#222', fontSize: 12 }}>
+                            <Text style={{ color: '#53ABFC' }}>{comment.nickname1}</Text>回复
+                            <Text style={{ color: '#53ABFC' }}>{comment.nickname2}</Text>：{comment.content}
+                        </Text>
                     </TouchableHighlight>
                 );
             }
@@ -221,7 +201,7 @@ export default class DynamicRow extends Component {
                     {address}
                     {/*点赞数量、评论数量*/}
                     <View style={{ flexDirection: 'row', marginTop: 7 }}>
-                        <TouchableHighlight underlayColor='rgba(0,0,0,0.1)' onPress={() => this.props.onPressLike(this.state.rowData.id, this.props.rowID)}>
+                        <TouchableHighlight underlayColor='rgba(0,0,0,0.1)' onPress={() => this.props._onPressLike(this.state.rowData.id, this.props.rowIndex)}>
                             <View style={{ flexDirection: 'row' }}>
                                 <Icon name="md-thumbs-up" size={16} color='#ccc' />
                                 <Text style={{ fontSize: 12, color: '#ccc', marginLeft: 2, marginTop: StyleSheet.hairlineWidth }}>{this.state.rowData.like_account}</Text>
@@ -231,7 +211,7 @@ export default class DynamicRow extends Component {
                             if (this.props.user == null) {
                                 this.props.navigation.navigate('Login'); return;
                             }
-                            this.props.callback('', this.state.rowData.id, 0, this.props.rowID);
+                            this.props._onPressReply('', 0, this.state.rowData.id, this.props.rowIndex);
                         }}>
                             <View style={{ flexDirection: 'row' }}>
                                 <Icon name="ios-text" size={17} color='#ccc' style={{ marginTop: 1 }} />
