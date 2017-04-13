@@ -1,5 +1,3 @@
-# 写在前面
-我只是一个小后台程序员，最近有点空闲想学习一下RN，希望能和感兴趣的同学一起交流，wechat：freedomdouble
 # 运行系统
 Android
 # 目录结构
@@ -14,8 +12,3 @@ Android
 ![](https://github.com/freedomdouble/bbs/blob/master/gif/4.gif)
 # 截图五
 ![](https://github.com/freedomdouble/bbs/blob/master/gif/5.gif)
-# 待完善
-消息通知  
-目录结构  
-代码冗余  
-动画效果
