@@ -15,7 +15,8 @@ import {
     ViewPagerAndroid,
     Modal,
     TextInput,
-    BackAndroid
+    BackAndroid,
+    ActivityIndicator
 } from 'react-native';
 
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -47,6 +48,7 @@ export default class Dynamic extends Component {
             hotListData: [],
             newLoadMoreFlag: 0,
             hotLoadMoreFlag: 0,
+            isNetDown: false,
             dynamic: { content: '', dynamic_id: 0, parent_id: 0 }
         };
     }
@@ -258,7 +260,7 @@ export default class Dynamic extends Component {
             let response = await fetch(url);
             var result = await response.json();
         } catch (error) {
-            this.setState({ refreshing: false });
+            this.setState({ refreshing: false, isNetDown: true });
             ToastAndroid.show('网络错误', ToastAndroid.SHORT);
             return;
         }
@@ -277,11 +279,11 @@ export default class Dynamic extends Component {
             var newListData = this.state.newListData;
             newListData = newListData.concat(result.list);
 
-            this.setState({ refreshing: false, newListData: newListData, newLoadMoreFlag: loadMoreFlag });
+            this.setState({ refreshing: false, newListData: newListData, newLoadMoreFlag: loadMoreFlag, isNetDown: false });
         }
         if (result.status == -1) {
             ToastAndroid.show(result.msg, ToastAndroid.SHORT);
-            this.setState({ refreshing: false });
+            this.setState({ refreshing: false, isNetDown: false });
         }
     }
 
@@ -298,7 +300,7 @@ export default class Dynamic extends Component {
             let response = await fetch(url);
             var result = await response.json();
         } catch (error) {
-            this.setState({ refreshing: false });
+            this.setState({ refreshing: false, isNetDown: true });
             ToastAndroid.show('网络错误', ToastAndroid.SHORT);
             return;
         }
@@ -316,11 +318,11 @@ export default class Dynamic extends Component {
                 this.newListObject.isPageEnd = true;
             }
 
-            this.setState({ refreshing: false, newListData: result.list, newLoadMoreFlag: loadMoreFlag });
+            this.setState({ refreshing: false, newListData: result.list, newLoadMoreFlag: loadMoreFlag, isNetDown: false });
         }
         if (result.status == -1) {
             ToastAndroid.show(result.msg, ToastAndroid.SHORT);
-            this.setState({ refreshing: false });
+            this.setState({ refreshing: false, isNetDown: false });
         }
     }
 
@@ -335,7 +337,7 @@ export default class Dynamic extends Component {
             let response = await fetch(url);
             var result = await response.json();
         } catch (error) {
-            this.setState({ refreshing: false });
+            this.setState({ refreshing: false, isNetDown: true });
             ToastAndroid.show('网络错误', ToastAndroid.SHORT);
             return;
         }
@@ -354,12 +356,12 @@ export default class Dynamic extends Component {
             let hotListData = this.state.hotListData;
             hotListData = hotListData.concat(result.list);
 
-            this.setState({ refreshing: false, hotListData: hotListData, hotLoadMoreFlag: loadMoreFlag });
+            this.setState({ refreshing: false, hotListData: hotListData, hotLoadMoreFlag: loadMoreFlag, isNetDown: false });
         }
 
         if (result.status == -1) {
             ToastAndroid.show(result.msg, ToastAndroid.SHORT);
-            this.setState({ refreshing: false });
+            this.setState({ refreshing: false, isNetDown: false });
         }
     }
 
@@ -376,7 +378,7 @@ export default class Dynamic extends Component {
             let response = await fetch(url);
             var result = await response.json();
         } catch (error) {
-            this.setState({ refreshing: false });
+            this.setState({ refreshing: false, isNetDown: true });
             ToastAndroid.show('网络错误', ToastAndroid.SHORT);
             return;
         }
@@ -394,11 +396,11 @@ export default class Dynamic extends Component {
                 this.hotListObject.isPageEnd = true;
             }
 
-            this.setState({ refreshing: false, hotListData: result.list, hotLoadMoreFlag: loadMoreFlag });
+            this.setState({ refreshing: false, hotListData: result.list, hotLoadMoreFlag: loadMoreFlag, isNetDown: false });
         }
         if (result.status == -1) {
             ToastAndroid.show(result.msg, ToastAndroid.SHORT);
-            this.setState({ refreshing: false });
+            this.setState({ refreshing: false, isNetDown: false });
         }
     }
 
@@ -501,25 +503,33 @@ export default class Dynamic extends Component {
     render() {
 
         let body = (
-            <View style={{ flex: 1 }}>
-                <ViewPagerAndroid
-                    ref={viewPager => { this._viewPage = viewPager; }}
-                    style={{ width: ScreenW, flex: 1 }}
-                    initialPage={0}
-                    onPageSelected={this._onPageSelected}>
-                    {/*最新列表*/}
-                    <View style={{ width: ScreenW, flex: 1, backgroundColor: '#fff' }}>
-                        {this._renderNewList()}
-                    </View>
-                    {/*\最新列表*/}
-                    {/*热门列表*/}
-                    <View style={{ width: ScreenW, flex: 1, backgroundColor: '#fff' }}>
-                        {this._renderHotList()}
-                    </View>
-                    {/*\热门列表*/}
-                </ViewPagerAndroid >
+            <View style={{ flex: 1, backgroundColor: '#f4f4f4', alignItems: 'center', justifyContent: 'center' }}>
+                <ActivityIndicator animating={true} size="large" color="#03c893" />
             </View>
         );
+
+        if (this.state.newListData.length > 0 || this.state.hotListData.length > 0 || this.state.isNetDown == true) {
+            body = (
+                <View style={{ flex: 1 }}>
+                    <ViewPagerAndroid
+                        ref={viewPager => { this._viewPage = viewPager; }}
+                        style={{ width: ScreenW, flex: 1 }}
+                        initialPage={0}
+                        onPageSelected={this._onPageSelected}>
+                        {/*最新列表*/}
+                        <View style={{ width: ScreenW, flex: 1, backgroundColor: '#fff' }}>
+                            {this._renderNewList()}
+                        </View>
+                        {/*\最新列表*/}
+                        {/*热门列表*/}
+                        <View style={{ width: ScreenW, flex: 1, backgroundColor: '#fff' }}>
+                            {this._renderHotList()}
+                        </View>
+                        {/*\热门列表*/}
+                    </ViewPagerAndroid >
+                </View>
+            );
+        }
 
         return (
             <View style={{ flex: 1 }}>

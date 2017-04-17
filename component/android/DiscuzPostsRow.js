@@ -60,7 +60,7 @@ export default class DiscuzPostsRow extends Component {
 			);
 		}
 
-		if (rowData.images.length == 1) {
+		if (rowData.images.length == 1 || rowData.images.length == 2) {
 
 			let ImgWidth = (ScreenW - 60) / 3;
 			let ImgHeight = ScreenW / 3 * 0.6;
