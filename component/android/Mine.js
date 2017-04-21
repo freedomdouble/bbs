@@ -32,6 +32,7 @@ export default class Mine extends Component {
 
         this.user = null;
         this.submited = false;
+        this.socket = null;
 
         this.state = {
             avator: 'http://ogmcbs0k8.bkt.clouddn.com/2017011999719767678670.gif',
@@ -39,7 +40,7 @@ export default class Mine extends Component {
             isVisible: false,
             data: null,
             loaded: false,
-            refreshing: false
+            refreshing: false,
         };
     }
 
@@ -49,6 +50,8 @@ export default class Mine extends Component {
 
     componentWillUnmount() {
         BackAndroid.removeEventListener('hardwareBackPress', this._onBackAndroid);
+
+        this.socket.close();
     }
 
     _onBackAndroid = () => {
@@ -84,12 +87,41 @@ export default class Mine extends Component {
         this.setState({ data: result.data, refreshing: false });
     }
 
+    async _fetchMsgCount() {
+
+        const url = 'http://121.11.71.33:8081/api/msg/count';
+
+        console.log(url);
+
+        try {
+            let response = await fetch(url, {
+                headers: {
+                    'Authorization': this.user == null ? null : this.user.token
+                }
+            });
+
+            var result = await response.json();
+        } catch (error) {
+            ToastAndroid.show('网络错误', ToastAndroid.SHORT);
+            return;
+        }
+
+        if (result.status == 1) {
+            let data = this.state.data;
+            data.msg_account = result.data;
+            this.setState({ data: data });
+        }
+    }
+
     async componentDidMount() {
 
         // await AsyncStorage.clear();
 
+        var user = null;
+        var _this = this;
+
         try {
-            const user = await AsyncStorage.getItem('user');
+            user = await AsyncStorage.getItem('user');
             if (user !== null) {
                 this.user = JSON.parse(user);
                 this.setState({
@@ -104,6 +136,46 @@ export default class Mine extends Component {
         this.setState({ loaded: true });
 
         this._fetchAccounts();
+
+        // 以下是socket监听
+        let server_url = "ws://121.11.71.33:8988";
+
+        console.log(server_url);
+
+        try {
+            if (this.socket == null) {
+                this.socket = new WebSocket(server_url);
+            }
+
+            var socket = this.socket;
+
+            socket.onopen = function () {
+                user = user == null ? null : JSON.parse(user);
+                let token = user == null ? '' : user.token;
+                console.log("Connected successful");
+                socket.send(JSON.stringify({AUTH: token}));
+            };
+
+            socket.onmessage = function (evt) {
+                console.log("Received: " + evt.data);
+                if (evt.data == 'NOTIFY') {
+                    _this._fetchMsgCount();
+                }
+            };
+
+            socket.onerror = function (evt) {
+                console.log("error");
+            };
+
+            socket.onclose = function (evt) {
+                console.log("close");
+            };
+
+        } catch (e) {
+
+            console.log(e.message);
+        }
+
     }
 
     async _onRefresh() {
